@@ -42,16 +42,44 @@ exactly the one module. The registry it reads is a table of literal imports, so 
 see through it and split it properly.
 
 ```js
-import { load, loadFlag, has, CODES } from 'geoglyph';
+import { load, has, CODES } from 'geoglyph';
+import { loadFlag } from 'geoglyph/flags';        // 48×36 raster
+import { loadFlagSvg } from 'geoglyph/flags-svg'; // svg source
 
 if (has(code)) {
-  const shape = await load(code);                          // outline
-  const flag = await loadFlag(code);                       // 48×36 raster
-  const big = await loadFlag(code, { raster: false });     // svg source
+  const shape = await load(code);
+  const flag = await loadFlag(code);
 }
 ```
 
-**Rendering** is a string, not a component. A leaf node with no state has no business
+The three loaders live at three entry points on purpose. Each reads a registry of 242
+literal dynamic imports, and a bundler emits a chunk for every one it can see — whether or
+not the function reading them is ever called, because `import()` is counted before dead
+code is removed. Behind one entry point, a build that only ever drew silhouettes emitted
+484 flag chunks it could never request. Split, you get chunks for the tiers you import.
+
+### React
+
+```jsx
+import { Glyph } from 'geoglyph/react';
+import shape from 'geoglyph/shape/br';
+import flag from 'geoglyph/flag-px/br';
+
+<Glyph shape={shape} flag={flag} size="1.5em" title="Brazil" />
+```
+
+Deliberately dumb: it takes a shape rather than a country code, holds no state, runs no
+effect and fetches nothing. A component that loaded its own data would put a request
+waterfall behind every flag on a page and a loading state in every consumer. Pass a static
+import when you know the country, and the result of `load()` when you do not — through
+`use()`, a query cache, or whatever already owns your loading states.
+
+`className`, `style`, `onClick`, `data-*` and a `ref` all land on the `<svg>`. React is an
+optional peer dependency; nothing else in the package touches it.
+
+### Anywhere else
+
+Rendering is a string, not a component. A leaf node with no state has no business
 picking a framework for you, so this works in Astro, in `dangerouslySetInnerHTML`, in a
 template literal, in a Hugo partial, in `innerHTML`.
 
@@ -59,6 +87,9 @@ template literal, in a Hugo partial, in `innerHTML`.
 toSvg(shape);                                    // silhouette in currentColor, 1em
 toSvg(shape, { flag, size: 24, title: 'Chile' });
 ```
+
+Both renderers produce the same markup, down to the clip path id — so one can render the
+shell and the other an island without the hydration disagreeing.
 
 The flag is drawn *over* the silhouette, not instead of it — so there is something to see
 while the image is still arriving, and so a hover fades onto the shape rather than onto
@@ -128,11 +159,11 @@ That is the one to use when the flag is a fill inside a silhouette. It is the de
 | `geoglyph/shape/<iso>` | `{ d, viewBox }`, default export too |
 | `geoglyph/flag/<iso>` | SVG source string |
 | `geoglyph/flag-px/<iso>` | `data:image/png;base64,…`, 48×36 |
-| `load(iso)` | `Promise<Shape \| null>` |
-| `loadFlag(iso, { raster })` | `Promise<string \| null>`, raster by default |
-| `has(iso)` | `boolean`, without loading |
-| `CODES` | every code with a glyph, sorted |
-| `toSvg(shape, options)` | `string` |
+| `geoglyph` | `load`, `has`, `CODES`, `toSvg`, types |
+| `geoglyph/svg` | `toSvg`, `clipIdFor`, `flagHref` |
+| `geoglyph/react` | `Glyph` |
+| `geoglyph/flags` | `loadFlag(iso)` → raster |
+| `geoglyph/flags-svg` | `loadFlagSvg(iso)` → SVG source |
 
 Subpath imports are lowercase (`geoglyph/shape/br`). `load`, `loadFlag` and `has` take
 either case.
@@ -143,6 +174,19 @@ you; anything else is treated as an address. Given a `title` the `<svg>` becomes
 `role="img"`; without one it is `aria-hidden`. `clipId` defaults to a fingerprint of the
 outline, so server and client agree and the same country twice is harmless — a shared
 clip path clips both correctly.
+
+## Sizes, measured
+
+Bundled with esbuild, minified:
+
+| | entry | chunks |
+| --- | --- | --- |
+| three countries + one flag, statically imported | 8.2 KB | none |
+| `load()` only | 2.5 KB | 244, fetched on demand |
+| `load()` + `loadFlag()` | 2.6 KB | 487, fetched on demand |
+
+The tarball is 773 KB packed, 2.1 MB unpacked, 747 files. Most of that is the vector flag
+tier, which is 1.5 MB of the total and which nobody downloads until they ask for a country.
 
 ## What is not in here
 
@@ -166,6 +210,19 @@ node scripts/contact-sheet.mjs     # all 242, twice each, for eyeballing
 The crop is a heuristic, and when a heuristic fails here it fails quietly — by drawing a
 country nobody would recognise. There is no unit test for "looks like Italy", so the
 contact sheet is the check. Open it and look.
+
+## Publishing
+
+Changesets, and one job with two states. `pnpm changeset` on anything that should reach
+npm; merging it to master opens a "Version packages" pull request, and merging *that*
+publishes — with provenance, after the same `pnpm check` that guards a local publish. So
+master's head goes out as soon as it is green, and the only ceremony is the version PR.
+
+`pnpm check` is build, typecheck, tests, [publint](https://publint.dev) and
+[are-the-types-wrong](https://arethetypeswrong.github.io). The two attw rules that are
+ignored — `no-resolution` and `cjs-resolves-to-esm` — are both the same fact stated twice:
+this package is ESM-only by choice, and shipping types for a resolver that could never load
+the code would be theatre.
 
 ## Licence
 

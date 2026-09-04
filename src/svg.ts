@@ -5,7 +5,7 @@ import type { Shape, SvgOptions } from './types.js';
  * server rendering — the markup has to match what the client would produce — and a
  * counter would break it differently, by depending on how many glyphs came before.
  */
-function fingerprint(text: string): string {
+export function fingerprint(text: string): string {
   let hash = 0x811c9dc5;
   for (let i = 0; i < text.length; i += 1) {
     hash ^= text.charCodeAt(i);
@@ -21,7 +21,7 @@ const escape = (text: string) =>
  * Raw SVG source becomes a data URI; anything else is already an address. Percent-encoded
  * rather than base64, which is both smaller for XML and legible in devtools.
  */
-const asHref = (flag: string) =>
+export const flagHref = (flag: string): string =>
   flag.trimStart().startsWith('<')
     ? `data:image/svg+xml;utf8,${encodeURIComponent(flag)}`
     : flag;
@@ -43,7 +43,7 @@ const asHref = (flag: string) =>
 export function toSvg(shape: Shape, options: SvgOptions = {}): string {
   const { size = '1em', fill = 'currentColor', className, flag, title } = options;
   const length = typeof size === 'number' ? `${String(size)}px` : size;
-  const clip = options.clipId ?? `geoglyph-${fingerprint(shape.d)}`;
+  const clip = options.clipId ?? clipIdFor(shape);
 
   const label =
     title === undefined
@@ -57,7 +57,7 @@ export function toSvg(shape: Shape, options: SvgOptions = {}): string {
     parts.unshift(`<clipPath id="${escape(clip)}"><path d="${escape(shape.d)}"/></clipPath>`);
     parts.push(
       `<image class="geoglyph-flag" clip-path="url(#${escape(clip)})"` +
-        ` href="${escape(asHref(flag))}" x="0" y="0" width="100%" height="100%"` +
+        ` href="${escape(flagHref(flag))}" x="0" y="0" width="100%" height="100%"` +
         ` preserveAspectRatio="none"/>`,
     );
   }
@@ -69,3 +69,10 @@ export function toSvg(shape: Shape, options: SvgOptions = {}): string {
     `</svg>`
   );
 }
+
+/**
+ * The clip path id `toSvg` would use, for anyone building the markup themselves. Derived
+ * from the outline, so it is stable across a server render and a client one, and two of
+ * the same country in a document share a clip that clips both correctly.
+ */
+export const clipIdFor = (shape: Shape): string => `geoglyph-${fingerprint(shape.d)}`;

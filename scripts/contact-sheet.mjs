@@ -12,7 +12,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const { CODES, load, loadFlag, toSvg } = await import(join(root, 'dist', 'index.js'));
+const { CODES, load, toSvg } = await import(join(root, 'dist', 'index.js'));
+const { loadFlag } = await import(join(root, 'dist', 'flags.js'));
 
 const cells = [];
 for (const code of CODES) {

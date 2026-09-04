@@ -38,16 +38,28 @@
       "types": "./dist/svg.d.ts",
       "default": "./dist/svg.js"
     },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "default": "./dist/react.js"
+    },
+    "./flags": {
+      "types": "./dist/flags.d.ts",
+      "default": "./dist/flags.js"
+    },
+    "./flags-svg": {
+      "types": "./dist/flags-svg.d.ts",
+      "default": "./dist/flags-svg.js"
+    },
     "./shape/*": {
-      "types": "./generated/shape/*.d.ts",
+      "types": "./generated/shape.d.ts",
       "default": "./generated/shape/*.js"
     },
     "./flag/*": {
-      "types": "./generated/flag/*.d.ts",
+      "types": "./generated/flag.d.ts",
       "default": "./generated/flag/*.js"
     },
     "./flag-px/*": {
-      "types": "./generated/flag-px/*.d.ts",
+      "types": "./generated/flag-px.d.ts",
       "default": "./generated/flag-px/*.js"
     },
     "./package.json": "./package.json"
@@ -55,12 +67,29 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "vendor": "node scripts/build-shapes.mjs && node scripts/build-flags.mjs",
-    "check": "pnpm build && tsc --noEmit && node --test 'test/*.test.ts'",
-    "prepublishOnly": "pnpm build && pnpm check"
+    "sheet": "pnpm build && node scripts/contact-sheet.mjs",
+    "test": "node --test 'test/*.test.ts'",
+    "check": "pnpm build && tsc --noEmit && pnpm test && publint && attw --pack . --ignore-rules no-resolution cjs-resolves-to-esm",
+    "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@changesets/cli": "^3.0.1",
     "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "publint": "^0.3.24",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "sharp": "^0.34.5",
     "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   }
 }

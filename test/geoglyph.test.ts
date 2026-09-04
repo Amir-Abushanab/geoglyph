@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CODES, has, load, loadFlag, toSvg } from '../dist/index.js';
+import { CODES, has, load, toSvg } from '../dist/index.js';
+import { loadFlag } from '../dist/flags.js';
+import { loadFlagSvg } from '../dist/flags-svg.js';
 
 const subpaths = (d: string) => d.split('M').length - 1;
 function box(viewBox: string): { x: number; y: number; w: number; h: number } {
@@ -64,7 +66,7 @@ test('the sheet carries what a coarser one drops', async () => {
 test('every glyph has both tiers of flag', async () => {
   for (const code of CODES) {
     const raster = await loadFlag(code);
-    const vector = await loadFlag(code, { raster: false });
+    const vector = await loadFlagSvg(code);
     assert.ok(raster?.startsWith('data:image/png;base64,'), `${code} raster`);
     assert.ok(vector?.startsWith('<svg'), `${code} vector`);
   }
