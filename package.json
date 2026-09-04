@@ -1,0 +1,66 @@
+{
+  "name": "geoglyph",
+  "version": "0.1.0",
+  "description": "Every country as a mark the size of a letter: an SVG outline cropped to the landmass people recognise, and its flag to pour inside.",
+  "keywords": [
+    "country",
+    "countries",
+    "silhouette",
+    "outline",
+    "shape",
+    "glyph",
+    "icon",
+    "svg",
+    "flag",
+    "flags",
+    "iso-3166",
+    "natural-earth",
+    "map"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "packageManager": "pnpm@11.24.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "generated",
+    "NOTICE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./svg": {
+      "types": "./dist/svg.d.ts",
+      "default": "./dist/svg.js"
+    },
+    "./shape/*": {
+      "types": "./generated/shape/*.d.ts",
+      "default": "./generated/shape/*.js"
+    },
+    "./flag/*": {
+      "types": "./generated/flag/*.d.ts",
+      "default": "./generated/flag/*.js"
+    },
+    "./flag-px/*": {
+      "types": "./generated/flag-px/*.d.ts",
+      "default": "./generated/flag-px/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "vendor": "node scripts/build-shapes.mjs && node scripts/build-flags.mjs",
+    "check": "pnpm build && tsc --noEmit && node --test 'test/*.test.ts'",
+    "prepublishOnly": "pnpm build && pnpm check"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "sharp": "^0.34.5",
+    "typescript": "^5.9.3"
+  }
+}

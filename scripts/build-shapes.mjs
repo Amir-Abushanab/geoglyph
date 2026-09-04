@@ -1,0 +1,262 @@
+/**
+ * Turns a world map into 250 glyphs.
+ *
+ * SOURCE. Natural Earth 1:50m Admin 0 – Map subunits, public domain, from the project's
+ * own vector repository. Subunits rather than countries because that is the layer that
+ * gives French Guiana a code of its own instead of folding it into France — and because
+ * the 1:110m sheet everyone reaches for first cannot hold a country narrower than its own
+ * rounding, which is most of the Caribbean.
+ *
+ * The projection is equirectangular and unapologetic: x = lon + 180, y = 90 − lat, so
+ * SVG user units are degrees and north is up. Nothing here is drawing a map, so there is
+ * no case for a projection that trades area against shape to make an argument.
+ *
+ * The two things this does that a map generator does not:
+ *
+ * 1. CROP. Natural Earth gives a country every polygon it holds sovereignty over, so the
+ *    United States arrives with Alaska and Hawaii and France with Réunion. A box drawn
+ *    round all of that leaves the shape everyone recognises as a speck in an ocean of
+ *    white. Area cannot separate them — Alaska is 46% of the mainland, and New Zealand's
+ *    two islands are within a tenth of each other and must both stay. Distance can: start
+ *    at the largest polygon and take in whatever touches it, then whatever touches that.
+ *    Tasmania, Northern Ireland, the Canadian Arctic and both New Zealands survive;
+ *    Réunion and Hawaii do not.
+ *
+ * 2. SCALE THE PRECISION TO THE COUNTRY. A glyph is framed on its own, so what matters is
+ *    detail relative to the shape rather than to the globe. One grid for everything is
+ *    what makes Dominica — 0.14° across — vanish from a sheet that rounds to 0.1°. Every
+ *    country gets a grid a few hundredths of its own span, so Russia and Grenada come out
+ *    described to about the same number of points.
+ *
+ *   node scripts/build-shapes.mjs
+ */
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const SOURCE =
+  'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_map_subunits.geojson';
+const OUT = join(root, 'generated', 'shape');
+
+/** How many points across its own span a shape is worth describing to. */
+const DETAIL = 400;
+/** Floors and ceilings for that, in degrees: finer than a hundredth of a degree is noise
+    at any size a glyph is drawn, and coarser than a tenth loses the coastline. */
+const FINEST = 0.002;
+const COARSEST = 0.1;
+/** A ring smaller than this share of the country's span is a speck, not an island. */
+const SPECK = 1 / 90;
+/** How far apart two polygons can sit and still be one landmass, as a share of the span,
+    capped: two degrees of sea is a strait, twenty is an overseas department. */
+const REACH = 0.05;
+const REACH_MAX = 2;
+
+const clamp = (n, low, high) => Math.min(high, Math.max(low, n));
+
+/**
+ * Douglas–Peucker. Natural Earth carries a lot of points that survive rounding as
+ * collinear neighbours — three vertices describing one straight coast — and dropping
+ * them is free accuracy-wise and is most of the file.
+ */
+function simplify(points, tolerance) {
+  if (points.length < 3) return points;
+  const [ax, ay] = points[0];
+  const [bx, by] = points.at(-1);
+  const dx = bx - ax;
+  const dy = by - ay;
+  const span = Math.hypot(dx, dy);
+  let worst = 0;
+  let at = 0;
+  for (let i = 1; i < points.length - 1; i += 1) {
+    const [px, py] = points[i];
+    const distance =
+      span === 0
+        ? Math.hypot(px - ax, py - ay)
+        : Math.abs(dy * px - dx * py + bx * ay - by * ax) / span;
+    if (distance > worst) {
+      worst = distance;
+      at = i;
+    }
+  }
+  if (worst <= tolerance) return [points[0], points.at(-1)];
+  return [
+    ...simplify(points.slice(0, at + 1), tolerance).slice(0, -1),
+    ...simplify(points.slice(at), tolerance),
+  ];
+}
+
+const project = (ring) => ring.map(([lon, lat]) => [lon + 180, 90 - lat]);
+
+function boxOf(points) {
+  const xs = points.map((p) => p[0]);
+  const ys = points.map((p) => p[1]);
+  return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) };
+}
+const spanOf = (box) => Math.max(box.maxX - box.minX, box.maxY - box.minY);
+const union = (a, b) => ({
+  minX: Math.min(a.minX, b.minX),
+  maxX: Math.max(a.maxX, b.maxX),
+  minY: Math.min(a.minY, b.minY),
+  maxY: Math.max(a.maxY, b.maxY),
+});
+const within = (a, b, slack) =>
+  a.minX - slack <= b.maxX && b.minX - slack <= a.maxX && a.minY - slack <= b.maxY && b.minY - slack <= a.maxY;
+
+/** Outer rings only. The one hole worth anything is Lesotho, and it is its own glyph. */
+const ringsOf = (geometry) =>
+  (geometry.type === 'Polygon'
+    ? [geometry.coordinates]
+    : geometry.type === 'MultiPolygon'
+      ? geometry.coordinates
+      : []
+  ).map((polygon) => project(polygon[0]));
+
+/** Relative commands, and no separator where the sign already is one: a coastline is a
+    run of short hops, so `l.3-1.2` says what `L123.4 56.7` says in a third of the room. */
+const digits = (grid) => Math.max(0, Math.ceil(-Math.log10(grid)));
+const num = (n, places) => {
+  const text = String(Number(n.toFixed(places)));
+  return text.startsWith('0.') ? text.slice(1) : text.startsWith('-0.') ? `-${text.slice(2)}` : text;
+};
+const step = (dx, dy, places) => {
+  const x = num(dx, places);
+  const y = num(dy, places);
+  return y.startsWith('-') ? `${x}${y}` : `${x} ${y}`;
+};
+
+function ringPath(points, origin, grid, places) {
+  const snapped = [];
+  let last = null;
+  for (const [rawX, rawY] of points) {
+    const x = Number((Math.round((rawX - origin.x) / grid) * grid).toFixed(places));
+    const y = Number((Math.round((rawY - origin.y) / grid) * grid).toFixed(places));
+    if (last !== null && last[0] === x && last[1] === y) continue;
+    snapped.push([x, y]);
+    last = [x, y];
+  }
+  if (snapped.length < 4) return null;
+  // Closed with Z rather than by repeating the first point.
+  if (snapped.at(-1)[0] === snapped[0][0] && snapped.at(-1)[1] === snapped[0][1]) snapped.pop();
+  let out = `M${step(snapped[0][0], snapped[0][1], places)}l`;
+  for (let i = 1; i < snapped.length; i += 1) {
+    out += step(snapped[i][0] - snapped[i - 1][0], snapped[i][1] - snapped[i - 1][1], places);
+    if (i < snapped.length - 1) out += ',';
+  }
+  return `${out}Z`;
+}
+
+/** Air around the shape, as a share of its longer side, so it never sits on the edge. */
+const AIR = 0.04;
+
+export function glyphOf(rings) {
+  if (rings.length === 0) return null;
+  const whole = boxOf(rings.flat());
+  const span = spanOf(whole);
+  if (span === 0) return null;
+
+  const grid = clamp(span / DETAIL, FINEST, COARSEST);
+  const places = digits(grid);
+
+  /* Specks first: an islet the size of the grid is a rounding artefact, and leaving it in
+     lets the crop reach across an ocean through a chain of them. */
+  const parts = rings
+    .map((ring) => ({ ring, box: boxOf(ring) }))
+    .filter((part) => spanOf(part.box) >= span * SPECK)
+    .toSorted((a, b) => spanOf(b.box) - spanOf(a.box));
+  if (parts.length === 0) return null;
+
+  /* Grown one polygon at a time rather than compared against the largest once: an island
+     chain reaches the mainland through its neighbours, and a single pass would drop
+     everything past the first hop. */
+  const slack = clamp(span * REACH, FINEST, REACH_MAX);
+  const kept = [parts[0]];
+  let frame = parts[0].box;
+  for (let growing = true; growing; ) {
+    growing = false;
+    for (const part of parts) {
+      if (kept.includes(part) || !within(frame, part.box, slack)) continue;
+      kept.push(part);
+      frame = union(frame, part.box);
+      growing = true;
+    }
+  }
+
+  const air = spanOf(frame) * AIR;
+  const origin = { x: frame.minX - air, y: frame.minY - air };
+  const d = kept
+    .map((part) => ringPath(simplify(part.ring, grid * 1.2), origin, grid, places))
+    .filter((path) => path !== null)
+    .join('');
+  if (d === '') return null;
+
+  const round = (n) => Number(n.toFixed(places));
+  return {
+    d,
+    viewBox: `0 0 ${String(round(frame.maxX - frame.minX + air * 2))} ${String(round(frame.maxY - frame.minY + air * 2))}`,
+  };
+}
+
+/** ISO_A2_EH resolves the codes ISO_A2 leaves at -99 for the disputed and the dependent. */
+const isoOf = (properties) =>
+  [properties.ISO_A2_EH, properties.ISO_A2].find(
+    (value) => typeof value === 'string' && /^[A-Z]{2}$/.test(value),
+  );
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const file = process.argv[2];
+  const raw = file === undefined ? await (await fetch(SOURCE)).text() : await readFile(file, 'utf8');
+  const geo = JSON.parse(raw);
+
+  // Subunits of one country are separate features; a glyph wants the country whole.
+  const byCode = new Map();
+  for (const feature of geo.features) {
+    const code = isoOf(feature.properties);
+    if (code === undefined) continue;
+    const rings = ringsOf(feature.geometry);
+    byCode.set(code, [...(byCode.get(code) ?? []), ...rings]);
+  }
+
+  await rm(OUT, { recursive: true, force: true });
+  await mkdir(OUT, { recursive: true });
+
+  const made = [];
+  let bytes = 0;
+  for (const [code, rings] of [...byCode].toSorted(([a], [b]) => a.localeCompare(b))) {
+    const glyph = glyphOf(rings);
+    if (glyph === null) continue;
+    const lower = code.toLowerCase();
+    await writeFile(
+      join(OUT, `${lower}.js`),
+      `// ${code} — generated by scripts/build-shapes.mjs. Do not edit.\n` +
+        `export const shape = { d: ${JSON.stringify(glyph.d)}, viewBox: ${JSON.stringify(glyph.viewBox)} };\n` +
+        `export default shape;\n`,
+    );
+    await writeFile(
+      join(OUT, `${lower}.d.ts`),
+      `export declare const shape: { readonly d: string; readonly viewBox: string };\nexport default shape;\n`,
+    );
+    made.push(code);
+    bytes += glyph.d.length;
+  }
+
+  await writeFile(join(root, 'generated', 'codes.js'), `export const CODES = ${JSON.stringify(made)};\n`);
+  await writeFile(
+    join(root, 'generated', 'codes.d.ts'),
+    `export declare const CODES: readonly string[];\n`,
+  );
+  await writeFile(
+    join(root, 'generated', 'shape-registry.js'),
+    `// Generated by scripts/build-shapes.mjs. Do not edit.\nexport const shapes = {\n` +
+      made.map((c) => `  ${c}: () => import('./shape/${c.toLowerCase()}.js'),`).join('\n') +
+      `\n};\n`,
+  );
+  await writeFile(
+    join(root, 'generated', 'shape-registry.d.ts'),
+    `export declare const shapes: Record<\n  string,\n  () => Promise<{ shape: { readonly d: string; readonly viewBox: string } }>\n>;\n`,
+  );
+
+  console.log(
+    `build-shapes: ${String(made.length)} glyphs, ${String(Math.round(bytes / 1024))}KB of path data`,
+  );
+}
