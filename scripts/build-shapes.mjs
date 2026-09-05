@@ -32,7 +32,7 @@
  */
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE =
@@ -262,7 +262,9 @@ function codesByA3(features) {
   return map;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+/* Run directly, as against imported for `glyphOf`. Compared as URLs, since a path with a
+   space in it is percent-encoded on one side and not the other. */
+if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const file = process.argv[2];
   const raw =
     file === undefined ? await (await fetch(SOURCE)).text() : await readFile(file, 'utf8');

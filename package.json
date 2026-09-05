@@ -30,6 +30,8 @@
     "llms.txt",
     "NOTICE"
   ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -78,6 +80,7 @@
     "site": "pnpm build && node scripts/build-banner.mjs && pnpm llms && node scripts/build-site.mjs",
     "test": "node --test 'test/*.test.ts'",
     "check": "pnpm build && tsc --noEmit && pnpm lint && pnpm fmt:check && node scripts/build-llms.mjs --check && pnpm test && publint && attw --pack . --ignore-rules no-resolution cjs-resolves-to-esm",
+    "version-packages": "changeset version && pnpm llms",
     "release": "pnpm build && changeset publish"
   },
   "devDependencies": {

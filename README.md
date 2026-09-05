@@ -183,7 +183,7 @@ Bundled with esbuild, minified:
 | `load()` only | 2.4 KB | 243 modules |
 | `load()` + `loadFlag()` | 2.5 KB | 486 modules |
 
-The tarball is 766 KB packed, 2.0 MB unpacked, 753 files. Most of that is the vector flag
+The tarball is 771 KB packed, 2.0 MB unpacked, 754 files. Most of that is the vector flag
 tier, 1.5 MB of it, which nobody downloads until they ask for a country.
 
 ## What is not in here
@@ -197,6 +197,8 @@ tier, 1.5 MB of it, which nobody downloads until they ask for a country.
 - **Recognisable archipelagos.** Tokelau, the Marshall Islands and Tuvalu are scattered
   specks at any honest scale, and a glyph of them is scattered specks. No crop fixes a
   country made of atolls.
+
+The package takes sides on disputed territories when sufficient evidence is available.
 
 ## Two rendering decisions
 
@@ -296,8 +298,10 @@ Run `pnpm changeset` on anything that should reach npm. Merging it to master ope
 check mode, tests, [publint](https://publint.dev) and
 [are-the-types-wrong](https://arethetypeswrong.github.io).
 
-Two attw rules are ignored, `no-resolution` and `cjs-resolves-to-esm`. Both report the
-same thing: this package is ESM-only, so it ships no types for a CJS resolver.
+Two attw rules are ignored. `cjs-resolves-to-esm` says the package is ESM-only, which it
+is. `no-resolution` is TypeScript's legacy `node10` resolution, which cannot read
+`exports`: `main` and `types` get it to the root entry point, and nothing gets it to a
+subpath.
 
 ## Licence
 

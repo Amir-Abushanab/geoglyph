@@ -32,9 +32,13 @@ jobs:
       # Two states, one job. With changesets pending it opens or updates a version pull
       # request; with none pending — which is what merging that request leaves — it
       # publishes. So master's head goes out as soon as it is green.
+      #
+      # The version step also regenerates llms.txt, which carries the version number and is
+      # compared byte for byte by `pnpm check`: left stale, the version pull request would
+      # fail the very gate that lets it publish.
       - uses: changesets/action@v1
         with:
-          version: pnpm changeset version
+          version: pnpm version-packages
           publish: pnpm release
           commit: Version packages
           title: Version packages

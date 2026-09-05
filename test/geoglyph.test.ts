@@ -3,7 +3,12 @@ import test from 'node:test';
 import { CODES, has, load, toSvg } from '../dist/index.js';
 import { loadFlag } from '../dist/flags.js';
 import { loadFlagSvg } from '../dist/flags-svg.js';
-import { clipPathFor } from '../dist/svg.js';
+import { clipPathFor, flagHref } from '../dist/svg.js';
+/* Through the package's own name, the way a consumer reaches them: these are the wildcard
+   entries of the exports map, which attw cannot check and nothing else here imports. */
+import brShape from 'geoglyph/shape/br';
+import brFlag from 'geoglyph/flag-px/br';
+import brFlagSvg from 'geoglyph/flag/br';
 
 const subpaths = (d: string) => d.split('M').length - 1;
 function box(viewBox: string): { x: number; y: number; w: number; h: number } {
@@ -150,4 +155,33 @@ test('markup that would break out of an attribute is escaped', async () => {
   const svg = toSvg(shape, { title: 'Brazil " <script>', className: 'x" onload="y' });
   assert.doesNotMatch(svg, /onload="y"/);
   assert.match(svg, /&quot;/);
+});
+
+test('the exports map reaches every static module', async () => {
+  assert.deepEqual(brShape, await load('BR'));
+  assert.equal(brFlag, await loadFlag('BR'));
+  assert.equal(brFlagSvg, await loadFlagSvg('BR'));
+});
+
+test('an inline flag is encoded where a URL would misread it, and nowhere else', () => {
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 3">\n\t<path fill="#c00" d="M0 0h4v3H0z"/>\n</svg>';
+  const prefix = 'data:image/svg+xml;utf8,';
+  const href = flagHref(`\n  ${svg}`);
+  assert.ok(href.startsWith(prefix));
+  const body = href.slice(prefix.length);
+  // A URL parser drops tabs and newlines outright, which would fuse two attributes into
+  // one, and reads `#` as a fragment. Spaces, slashes and equals signs it leaves alone, so
+  // they stay legible and cost one byte instead of three.
+  assert.doesNotMatch(body, /[\t\n\r"#<>]/);
+  assert.match(
+    body,
+    /^%3Csvg xmlns=%22http:\/\/www\.w3\.org\/2000\/svg%22 viewBox=%220 0 4 3%22%3E%0A%09/,
+  );
+  assert.match(body, /fill=%22%23c00%22/);
+  assert.equal(decodeURIComponent(body), svg);
+  assert.ok(body.length < encodeURIComponent(svg).length, 'no smaller than encoding everything');
+  // An address, or a data URI already, is left exactly as given.
+  assert.equal(flagHref('/flags/br.png'), '/flags/br.png');
+  assert.equal(flagHref('data:image/png;base64,AAAA'), 'data:image/png;base64,AAAA');
 });

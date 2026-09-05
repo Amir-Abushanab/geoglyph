@@ -13,12 +13,29 @@ const escape = (text: string) =>
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#x27;');
 
+/*
+ * What a URL parser or an attribute would misread, and nothing else. `encodeURIComponent`
+ * on the whole document made the vector tier a third larger — every space, slash and
+ * equals sign three bytes — where this set costs under a tenth. Tabs and newlines because
+ * a URL parser strips them outright, which would fuse two attributes into one; `%` because
+ * it is the escape; `#` because it opens a fragment, and `?` a query; quotes, `&` and the
+ * angle brackets for whoever puts the result in an attribute or a CSS `url()`, where each
+ * is three bytes here against six as an entity; the rest are not URL code points.
+ */
+const unsafe = /[\t\n\r"%#&'()<>?[\\\]^`{|}]/g;
+
 /**
  * Raw SVG source becomes a data URI; anything else is already an address. Percent-encoded
- * rather than base64, which is both smaller for XML and legible in devtools.
+ * rather than base64, which is both smaller for XML and legible in devtools. Whitespace
+ * ahead of the `<svg` is dropped: a document is allowed to open with an XML declaration
+ * only if nothing at all comes before it.
  */
-export const flagHref = (flag: string): string =>
-  flag.trimStart().startsWith('<') ? `data:image/svg+xml;utf8,${encodeURIComponent(flag)}` : flag;
+export const flagHref = (flag: string): string => {
+  const source = flag.trimStart();
+  return source.startsWith('<')
+    ? `data:image/svg+xml;utf8,${source.replace(unsafe, encodeURIComponent)}`
+    : flag;
+};
 
 /**
  * The `clip-path` that pours a flag into an outline — `path('…')`, ready to drop into a
