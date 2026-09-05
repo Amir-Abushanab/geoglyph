@@ -28,7 +28,7 @@ of the word next to them.
 ## Install
 
 ```sh
-npm install geoglyph
+pnpm install geoglyph
 ```
 
 ## Use
