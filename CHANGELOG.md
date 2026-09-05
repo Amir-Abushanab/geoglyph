@@ -1,5 +1,12 @@
 # geoglyph
 
+## 0.1.1
+
+### Patch Changes
+
+- 80a95f0: Point the README banner at an absolute URL and declare the repository, so the strip
+  renders on npm instead of resolving against npmjs.com and 404ing.
+
 ## 0.1.0
 
 ### Minor Changes
