@@ -23,7 +23,11 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # 24 for the npm it bundles: from 11.5.1 the CLI exchanges the Actions OIDC token
+          # for a registry one by itself. The action used to do that exchange; v2 dropped it,
+          # so the npm underneath is what makes trusted publishing work. No NODE_AUTH_TOKEN
+          # here on purpose — a token in .npmrc is the thing trusted publishing replaces.
+          node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
       - run: pnpm install --frozen-lockfile
@@ -36,13 +40,18 @@ jobs:
       # The version step also regenerates llms.txt, which carries the version number and is
       # compared byte for byte by `pnpm check`: left stale, the version pull request would
       # fail the very gate that lets it publish.
-      - uses: changesets/action@v1
+      #
+      # v2, not v1: v1 learned what had been published by reading `New tag:` off the CLI's
+      # stdout, and the v3 CLI stopped printing it. Publishing still worked, and then the
+      # action concluded nothing had shipped and quietly skipped the tag and the release —
+      # which is how 0.1.1 reached npm with neither. v2 reads a file the CLI writes instead,
+      # pointed at by CHANGESETS_OUTPUT, which our scripts inherit for free by being plain
+      # shell chains.
+      - uses: changesets/action@v2
         with:
-          version: pnpm version-packages
-          publish: pnpm release
-          commit: Version packages
-          title: Version packages
+          version-script: pnpm version-packages
+          publish-script: pnpm release
+          commit-message: Version packages
+          pr-title: Version packages
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
