@@ -91,7 +91,12 @@ const project = (ring) => ring.map(([lon, lat]) => [lon + 180, 90 - lat]);
 function boxOf(points) {
   const xs = points.map((p) => p[0]);
   const ys = points.map((p) => p[1]);
-  return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) };
+  return {
+    minX: Math.min(...xs),
+    maxX: Math.max(...xs),
+    minY: Math.min(...ys),
+    maxY: Math.max(...ys),
+  };
 }
 const spanOf = (box) => Math.max(box.maxX - box.minX, box.maxY - box.minY);
 const union = (a, b) => ({
@@ -101,7 +106,10 @@ const union = (a, b) => ({
   maxY: Math.max(a.maxY, b.maxY),
 });
 const within = (a, b, slack) =>
-  a.minX - slack <= b.maxX && b.minX - slack <= a.maxX && a.minY - slack <= b.maxY && b.minY - slack <= a.maxY;
+  a.minX - slack <= b.maxX &&
+  b.minX - slack <= a.maxX &&
+  a.minY - slack <= b.maxY &&
+  b.minY - slack <= a.maxY;
 
 /** Outer rings only. The one hole worth anything is Lesotho, and it is its own glyph. */
 const ringsOf = (geometry) =>
@@ -117,7 +125,11 @@ const ringsOf = (geometry) =>
 const digits = (grid) => Math.max(0, Math.ceil(-Math.log10(grid)));
 const num = (n, places) => {
   const text = String(Number(n.toFixed(places)));
-  return text.startsWith('0.') ? text.slice(1) : text.startsWith('-0.') ? `-${text.slice(2)}` : text;
+  return text.startsWith('0.')
+    ? text.slice(1)
+    : text.startsWith('-0.')
+      ? `-${text.slice(2)}`
+      : text;
 };
 const step = (dx, dy, places) => {
   const x = num(dx, places);
@@ -180,7 +192,7 @@ export function glyphOf(rings) {
   const slack = clamp(span * REACH, FINEST, REACH_MAX);
   const kept = [parts[0]];
   let frame = parts[0].box;
-  for (let growing = true; growing; ) {
+  for (let growing = true; growing;) {
     growing = false;
     for (const part of parts) {
       if (kept.includes(part) || !within(frame, part.box, slack)) continue;
@@ -211,16 +223,93 @@ const isoOf = (properties) =>
     (value) => typeof value === 'string' && /^[A-Z]{2}$/.test(value),
   );
 
+/**
+ * POINT OF VIEW.
+ *
+ * Natural Earth files every contested area more than once: alongside `ADM0_A3` it carries
+ * `ADM0_A3_RU`, `ADM0_A3_CN`, `ADM0_A3_US` and thirty more, each saying which country that
+ * ground belongs to as far as that state is concerned. They disagree, and the disagreement
+ * is the point — Kosovo is `KOS` to Washington and `SRB` to Moscow, Taiwan is `TWN` to most
+ * and `CHN` to Beijing, Crimea is `UKR` to nearly everyone and `RUS` to Russia.
+ *
+ * Set `GEOGLYPH_POV` and the sheet is cut that way: reassigned ground joins the country
+ * that viewpoint gives it to, and an entity that viewpoint does not recognise stops having
+ * a glyph at all, so it drops out of `CODES` and out of both flag tiers with it.
+ *
+ * Unset is not a neutral choice, only an inherited one — it is Natural Earth's own default
+ * assignment, which is what this package has always shipped.
+ */
+const POV = process.env.GEOGLYPH_POV?.toUpperCase();
+
+/** Where a feature's land goes under the chosen viewpoint. */
+const a3Under = (properties) =>
+  (POV === undefined ? undefined : properties[`ADM0_A3_${POV}`]) ?? properties.ADM0_A3;
+
+/**
+ * The code a whole admin-0 unit answers to, for the reassignment above. Deliberately not a
+ * plain map of every feature: six `ADM0_A3` values cover more than one ISO code — `FRA` is
+ * France, Mayotte, Réunion, Martinique, Guadeloupe and French Guiana — so the country's own
+ * feature is the one that names it, and its overseas subunits keep their own codes.
+ */
+function codesByA3(features) {
+  const map = new Map();
+  for (const { properties } of features) {
+    const code = isoOf(properties);
+    if (code === undefined) continue;
+    const primary = properties.SUBUNIT === properties.ADMIN;
+    if (primary || !map.has(properties.ADM0_A3)) map.set(properties.ADM0_A3, code);
+  }
+  return map;
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const file = process.argv[2];
-  const raw = file === undefined ? await (await fetch(SOURCE)).text() : await readFile(file, 'utf8');
+  const raw =
+    file === undefined ? await (await fetch(SOURCE)).text() : await readFile(file, 'utf8');
   const geo = JSON.parse(raw);
+
+  const povs = Object.keys(geo.features[0].properties)
+    .filter((key) => key.startsWith('ADM0_A3_'))
+    .map((key) => key.slice(8));
+  if (POV !== undefined && !povs.includes(POV)) {
+    throw new Error(`GEOGLYPH_POV=${POV} is not one of: ${povs.join(' ')}`);
+  }
+
+  const byA3 = codesByA3(geo.features);
 
   // Subunits of one country are separate features; a glyph wants the country whole.
   const byCode = new Map();
+  const stateless = new Map();
+  const reassigned = [];
   for (const feature of geo.features) {
-    const code = isoOf(feature.properties);
-    if (code === undefined) continue;
+    const properties = feature.properties;
+    const moved = a3Under(properties);
+    /* Left where it is, it keeps its own code — which is what holds French Guiana apart
+       from France. Moved, it becomes part of whoever this viewpoint says holds it.
+   
+       The fallback is what a viewpoint adds beyond reassignment. With none set the sheet is
+       keyed on each feature's own ISO code and ground that has no code of its own simply
+       has no home: Crimea is filed under `RUS` with no alpha-2, so it has never been drawn
+       in anybody's outline. Choose a viewpoint and that ground is attributed — to `RU`
+       under Russia's, to `UA` under everyone else's. */
+    const own = isoOf(properties);
+    const code =
+      moved === properties.ADM0_A3
+        ? (own ?? (POV === undefined ? undefined : byA3.get(moved)))
+        : byA3.get(moved);
+    if (code === undefined) {
+      /* This viewpoint grants the ground to an admin-0 unit with no ISO alpha-2 of its
+         own — Northern Cyprus to Turkey, Somaliland to Taiwan. There is no code to file a
+         glyph under and no honest country to fold it into, so it is left out and said so. */
+      const name = properties.ADMIN ?? properties.NAME;
+      if (name) stateless.set(name, moved);
+      continue;
+    }
+    if (moved !== properties.ADM0_A3 || own === undefined) {
+      reassigned.push(
+        `${properties.ADMIN ?? properties.NAME} → ${code} (${properties.ADM0_A3}→${moved})`,
+      );
+    }
     const rings = ringsOf(feature.geometry);
     byCode.set(code, [...(byCode.get(code) ?? []), ...rings]);
   }
@@ -252,7 +341,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     `import type { Shape } from '../dist/types.js';\n` +
       `export declare const shape: Shape;\nexport default shape;\n`,
   );
-  await writeFile(join(root, 'generated', 'codes.js'), `export const CODES = ${JSON.stringify(made)};\n`);
+  await writeFile(
+    join(root, 'generated', 'codes.js'),
+    `export const CODES = ${JSON.stringify(made)};\n`,
+  );
   await writeFile(
     join(root, 'generated', 'codes.d.ts'),
     `export declare const CODES: readonly string[];\n`,
@@ -269,6 +361,21 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   );
 
   console.log(
-    `build-shapes: ${String(made.length)} glyphs, ${String(Math.round(bytes / 1024))}KB of path data`,
+    `build-shapes: ${String(made.length)} glyphs, ${String(Math.round(bytes / 1024))}KB of path data` +
+      (POV === undefined ? '' : ` — point of view: ${POV}`),
   );
+  /* Printed rather than trusted. Every one of these is a claim, and the columns carry the
+     odd mistake — `ADM0_A3_AR` files Barbados under Uruguay, which Argentina does not
+     think either. A viewpoint you cannot read is a viewpoint you cannot check. */
+  if (reassigned.length > 0) {
+    console.log(
+      `  ${String(reassigned.length)} reassigned: ${[...new Set(reassigned)].join(', ')}`,
+    );
+  }
+  if (stateless.size > 0) {
+    console.warn(
+      `  no ISO code under this viewpoint, so left out: ` +
+        [...stateless].map(([name, a3]) => `${name} (${a3})`).join(', '),
+    );
+  }
 }

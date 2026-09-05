@@ -28,11 +28,21 @@ export interface SvgOptions {
    */
   readonly flag?: string;
   /**
-   * The id the flag's clip path is declared under. Defaults to one derived from the
-   * outline itself, so the same country always gets the same id — and two of them in one
-   * document is harmless, because a shared id clips both to the same shape.
+   * Paint the silhouette underneath the flag. Off by default, and that default is the
+   * whole of what this option is for.
+   *
+   * A fill and a clipped image with the same edge do not add up to one edge. At a
+   * boundary pixel with coverage `a` the composite is `flag·a + fill·a(1-a) + page·(1-a)²`
+   * — and that middle term peaks at a quarter of the fill colour, so the silhouette shows
+   * as a hairline around the entire glyph. It is there in both tiers, at every size, in
+   * every engine, and no arrangement of groups or clips removes it: only not painting the
+   * fill does.
+   *
+   * Turn it on when something has to be under the flag. Two cases: a `flag` that is a URL
+   * rather than a data URI, so there is a wait to fill; and the hover fade in the README,
+   * which wants the flag to fade onto the shape rather than onto the page.
    */
-  readonly clipId?: string;
+  readonly backdrop?: boolean;
   /** An accessible name. Given, the svg becomes `role="img"`; omitted, it is hidden. */
   readonly title?: string;
 }

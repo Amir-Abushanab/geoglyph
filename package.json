@@ -27,6 +27,7 @@
   "files": [
     "dist",
     "generated",
+    "llms.txt",
     "NOTICE"
   ],
   "exports": {
@@ -66,10 +67,17 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "lint": "oxlint",
+    "fmt": "oxfmt src test scripts",
+    "fmt:check": "oxfmt --check src test scripts",
+    "dev": "node scripts/dev.mjs",
     "vendor": "node scripts/build-shapes.mjs && node scripts/build-flags.mjs",
     "sheet": "pnpm build && node scripts/contact-sheet.mjs",
+    "banner": "pnpm build && node scripts/build-banner.mjs",
+    "llms": "node scripts/build-llms.mjs",
+    "site": "pnpm build && node scripts/build-banner.mjs && pnpm llms && node scripts/build-site.mjs",
     "test": "node --test 'test/*.test.ts'",
-    "check": "pnpm build && tsc --noEmit && pnpm test && publint && attw --pack . --ignore-rules no-resolution cjs-resolves-to-esm",
+    "check": "pnpm build && tsc --noEmit && pnpm lint && pnpm fmt:check && node scripts/build-llms.mjs --check && pnpm test && publint && attw --pack . --ignore-rules no-resolution cjs-resolves-to-esm",
     "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
@@ -78,6 +86,8 @@
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
+    "oxfmt": "0.66.0",
+    "oxlint": "1.81.0",
     "publint": "^0.3.24",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

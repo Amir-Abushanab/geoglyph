@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="geoglyph">
+  <title>geoglyph</title>
+  <!-- Same weight and geometry as the mark beside the wordmark, so the tab and the page
+       agree. One colour: at 16px a second one turns the graticule into the subject. -->
+  <style>
+    g { fill: none; stroke: #16181a; stroke-width: 1.7 }
+    @media (prefers-color-scheme: dark) { g { stroke: #e9e9e6 } }
+  </style>
+  <g>
+    <circle cx="12" cy="12" r="8.6"/>
+    <ellipse cx="12" cy="12" rx="8.6" ry="3.7"/>
+    <path d="M12 3.4a4.4 8.6 0 0 0 0 17.2a4.4 8.6 0 0 0 0-17.2"/>
+  </g>
+</svg>

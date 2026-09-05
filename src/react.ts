@@ -1,5 +1,5 @@
 import { createElement, forwardRef, type ReactElement, type SVGProps } from 'react';
-import { clipIdFor, flagHref } from './svg.js';
+import { clipPathFor, flagHref } from './svg.js';
 import type { Shape } from './types.js';
 
 export interface GlyphProps extends Omit<SVGProps<SVGSVGElement>, 'children' | 'ref'> {
@@ -14,10 +14,14 @@ export interface GlyphProps extends Omit<SVGProps<SVGSVGElement>, 'children' | '
   size?: string | number | undefined;
   /** Painted on the shape. Defaults to `currentColor`. */
   fill?: string | undefined;
+  /**
+   * Paint the silhouette underneath the flag. Off by default — a fill and a clipped image
+   * with the same edge leave a hairline of the fill around the whole glyph. See
+   * `SvgOptions['backdrop']` for the arithmetic and the two cases that want it anyway.
+   */
+  backdrop?: boolean | undefined;
   /** An accessible name. Given, this is `role="img"`; omitted, it is `aria-hidden`. */
   title?: string | undefined;
-  /** Overrides the clip path id, which otherwise comes from the outline itself. */
-  clipId?: string | undefined;
 }
 
 /**
@@ -36,36 +40,42 @@ export interface GlyphProps extends Omit<SVGProps<SVGSVGElement>, 'children' | '
  *     import flag from 'geoglyph/flag-px/br';
  *     <Glyph shape={shape} flag={flag} size="1.5em" title="Brazil" />
  *
- * The flag is drawn over the silhouette rather than instead of it, so there is something
- * to see while the image arrives and a hover fades onto the shape rather than onto
- * nothing. Both parts carry stable class names to style against:
+ * A flag replaces the silhouette rather than covering it — the two cannot share an edge
+ * without the lower one showing through it. `backdrop` paints it anyway, which is what the
+ * hover fade below needs to land on. Both parts carry stable class names to style against:
  *
  *     .geoglyph-flag { opacity: 0; transition: opacity 150ms }
  *     a:hover .geoglyph-flag { opacity: 1 }
  */
 export const Glyph = forwardRef<SVGSVGElement, GlyphProps>(function Glyph(props, ref) {
-  const { shape, flag, size = '1em', fill = 'currentColor', title, clipId, ...rest } = props;
+  const {
+    shape,
+    flag,
+    size = '1em',
+    fill = 'currentColor',
+    title,
+    backdrop = false,
+    ...rest
+  } = props;
   const length = typeof size === 'number' ? `${String(size)}px` : size;
-  const clip = clipId ?? clipIdFor(shape);
 
   /* Keyed children rather than a fragment: React wants keys for an array, and these are
-     an array so that the flag can be left out without a hole in the tree. */
-  const parts: ReactElement[] = [
-    createElement('path', { key: 'shape', className: 'geoglyph-shape', fill, d: shape.d }),
-  ];
-  if (flag !== undefined) {
-    parts.unshift(
-      createElement(
-        'clipPath',
-        { key: 'clip', id: clip },
-        createElement('path', { d: shape.d }),
-      ),
+     an array so that either part can be left out without a hole in the tree. */
+  const parts: ReactElement[] = [];
+  if (flag === undefined || backdrop) {
+    parts.push(
+      createElement('path', { key: 'shape', className: 'geoglyph-shape', fill, d: shape.d }),
     );
+  }
+  if (flag !== undefined) {
     parts.push(
       createElement('image', {
         key: 'flag',
         className: 'geoglyph-flag',
-        clipPath: `url(#${clip})`,
+        /* The outline itself, in `style`, not a `url(#…)` at a `<clipPath>` sibling — see
+           `clipPathFor`. It also means this element is the whole flag: nothing above it in
+           the tree has to survive for it to keep its shape. */
+        style: { clipPath: clipPathFor(shape) },
         href: flagHref(flag),
         x: 0,
         y: 0,
@@ -88,9 +98,7 @@ export const Glyph = forwardRef<SVGSVGElement, GlyphProps>(function Glyph(props,
       width: length,
       height: length,
       focusable: 'false',
-      ...(title === undefined
-        ? { 'aria-hidden': true }
-        : { role: 'img', 'aria-label': title }),
+      ...(title === undefined ? { 'aria-hidden': true } : { role: 'img', 'aria-label': title }),
     },
     parts,
   );

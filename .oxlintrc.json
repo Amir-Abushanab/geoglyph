@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error"
+  },
+  "env": {
+    "es2024": true,
+    "node": true
+  },
+  "ignorePatterns": ["dist", "generated", "node_modules"],
+  "overrides": [
+    {
+      "files": ["scripts/dev/playground.js"],
+      "env": { "browser": true, "node": false }
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+# geoglyph
+
+> Every country as an SVG outline the size of a letter, with its flag to pour inside.
+> 242 countries, ISO 3166-1 alpha-2. ESM only, no runtime dependencies.
+
+Playground: https://amir-abushanab.github.io/geoglyph/
+Version: 0.1.0
+
+## Entry points
+
+- `geoglyph`
+- `geoglyph/svg`
+- `geoglyph/react`
+- `geoglyph/flags`
+- `geoglyph/flags-svg`
+- `geoglyph/shape/*`
+- `geoglyph/flag/*`
+- `geoglyph/flag-px/*`
+
+`geoglyph` exports `load`, `has`, `CODES`, `toSvg`.
+`geoglyph/svg` exports `toSvg`, `clipPathFor`, `flagHref`.
+`geoglyph/react` exports `Glyph`.
+`geoglyph/flags` exports `loadFlag`. `geoglyph/flags-svg` exports `loadFlagSvg`.
+
+## Get this right
+
+- Subpath imports are lowercase: `geoglyph/shape/br`, not `/BR`.
+  `load`, `has`, `loadFlag` and `loadFlagSvg` take either case.
+- `loadFlag` is NOT on `geoglyph`. It is on `geoglyph/flags`, and `loadFlagSvg` is on
+  `geoglyph/flags-svg`. Three entry points, so a build that draws only silhouettes does
+  not emit flag chunks.
+- `flag` is a string, not an object. Pass the default export of `geoglyph/flag-px/<iso>`.
+- `toSvg` returns a string of SVG markup, not an element.
+- `<Glyph>` takes `shape`, not a country code. It fetches nothing.
+- `load` and `loadFlag` return `null` for an unknown code. `has(iso)` checks first.
+- A flag replaces the silhouette. If you fade the flag out with CSS, pass
+  `backdrop: true` or it fades onto the page instead of onto the shape.
+
+## toSvg(shape, options)
+
+- `size` `string | number`, default `1em`. A number is treated as px.
+- `fill` `string`, default `currentColor`. Painted on the silhouette.
+- `className` `string`, default `geoglyph`. Goes on the `<svg>`.
+- `flag` `string`. A URL, a data URI, or raw `<svg>` source. Not an object.
+- `backdrop` `boolean`, default `false`. Paints the silhouette under the flag.
+- `title` `string`. Sets `role="img"` and the accessible name. Omitted, the svg is `aria-hidden`.
+
+## Glyph props
+
+`shape`, `flag`, `size`, `fill`, `backdrop`, `title`, plus anything else valid on an `<svg>`
+(`style`, `onClick`, `data-*`, `ref`).
+
+## Static import, when the country is known at build time
+
+```js
+import shape from 'geoglyph/shape/cl';   // { d, viewBox }
+import flag from 'geoglyph/flag-px/cl';  // 48x36 png data uri, ~640 B
+import { toSvg } from 'geoglyph/svg';
+
+toSvg(shape, { flag, size: '1.5em', title: 'Chile' });
+```
+
+## Dynamic, when it is not
+
+```js
+import { load, has } from 'geoglyph';
+import { loadFlag } from 'geoglyph/flags';
+
+if (has(code)) {
+  const shape = await load(code);
+  const flag = await loadFlag(code);
+  return toSvg(shape, { flag });
+}
+```
+
+## React
+
+```jsx
+import { Glyph } from 'geoglyph/react';
+import shape from 'geoglyph/shape/br';
+import flag from 'geoglyph/flag-px/br';
+
+<Glyph shape={shape} flag={flag} size="1.5em" title="Brazil" />
+```
+
+## Flag tiers
+
+- `geoglyph/flag-px/<iso>` is a 48x36 png data uri, ~640 B whatever the country. Use it
+  when the flag fills a silhouette. Above about 48px it visibly softens.
+- `geoglyph/flag/<iso>` is SVG source. Scales to anything, median 804 B, but uneven:
+  Serbia is 177 KB.
+
+## Codes
+
+AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FK FO FR GA GB GD GE GF GG GH GL GM GN GP GQ GR GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IQ IR IS IT JE JM JO JP KE KG KH KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW

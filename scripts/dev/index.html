@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>geoglyph — playground</title>
+    <meta
+      name="description"
+      content="Every country as a mark the size of a letter: 242 outlines cropped to the landmass each is recognised by, and its flag to pour inside."
+    />
+    <!--
+      Every asset above and below is relative, because Pages serves this from a subpath
+      (/geoglyph/) where a leading slash would climb out of the site. The social card is the
+      one exception: scrapers do not resolve a relative og:image, so it has to be absolute.
+    -->
+    <link rel="canonical" href="https://amir-abushanab.github.io/geoglyph/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="geoglyph — playground" />
+    <meta
+      property="og:description"
+      content="Every country as a mark the size of a letter: 242 outlines cropped to the landmass each is recognised by, and its flag to pour inside."
+    />
+    <meta property="og:url" content="https://amir-abushanab.github.io/geoglyph/" />
+    <meta property="og:image" content="https://amir-abushanab.github.io/geoglyph/banner.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Twelve country outlines with their flags poured inside, under the word geoglyph."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <!-- Before the stylesheet, and deliberately not a module: a pinned scheme has to land on
+     the root element before the first paint, or the page flashes the other one. -->
+    <script>
+      {
+        const pinned = localStorage.getItem('geoglyph:scheme');
+        if (pinned === 'light' || pinned === 'dark') {
+          document.documentElement.dataset.scheme = pinned;
+          document.querySelector('meta[name="color-scheme"]').content = pinned;
+        }
+      }
+    </script>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./playground.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <h1>
+        <!-- The same landmass as the favicon, in one colour so it reads as a letter beside the
+         word and inherits like one. -->
+        <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+          <g fill="none" stroke="currentColor" stroke-width="1.7">
+            <circle cx="12" cy="12" r="8.6" />
+            <ellipse cx="12" cy="12" rx="8.6" ry="3.7" />
+            <path d="M12 3.4a4.4 8.6 0 0 0 0 17.2a4.4 8.6 0 0 0 0-17.2" />
+          </g>
+        </svg>
+        geoglyph
+      </h1>
+      <p class="tagline">Every country as a mark the size of a letter.</p>
+      <button type="button" id="scheme" class="ghost icon">
+        <svg class="sun" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4.3" />
+          <path
+            d="M12 2.4v2.6M12 19v2.6M2.4 12H5M19 12h2.6M5.2 5.2 7 7M17 17l1.8 1.8M18.8 5.2 17 7M7 17l-1.8 1.8"
+          />
+        </svg>
+        <svg class="moon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20.5 14.6A8.6 8.6 0 0 1 9.4 3.5a7.9 7.9 0 1 0 11.1 11.1Z" />
+        </svg>
+      </button>
+    </header>
+
+    <form id="settings" class="panel" autocomplete="off">
+      <div class="field">
+        <label for="draw">Draw</label>
+        <select id="draw" name="draw">
+          <option value="flag">Flag inside the shape</option>
+          <option value="shape">Silhouette only</option>
+          <option value="raw">Flag on its own</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="tier">Flag tier</label>
+        <select id="tier" name="tier">
+          <option value="raster">Raster — 48×36, ~640 B flat</option>
+          <option value="vector">Vector — SVG source</option>
+        </select>
+      </div>
+
+      <div class="field wide">
+        <label for="size">size</label>
+        <div class="pair">
+          <input
+            type="range"
+            id="sizeRange"
+            min="12"
+            max="320"
+            step="1"
+            value="48"
+            aria-label="size in pixels"
+          />
+          <input type="text" id="size" name="size" value="48px" spellcheck="false" size="8" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="fill">fill</label>
+        <div class="pair">
+          <input type="color" id="fillPicker" value="#1d4e3f" aria-label="pick a fill colour" />
+          <input
+            type="text"
+            id="fill"
+            name="fill"
+            value="currentColor"
+            spellcheck="false"
+            size="12"
+          />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="className">className</label>
+        <input
+          type="text"
+          id="className"
+          name="className"
+          value="geoglyph"
+          spellcheck="false"
+          size="12"
+        />
+      </div>
+
+      <div class="field">
+        <label for="bg">Behind the glyph</label>
+        <div class="pair">
+          <input type="color" id="bgPicker" value="#ff8a1f" aria-label="pick a backdrop colour" />
+          <input
+            type="text"
+            id="bg"
+            name="bg"
+            placeholder="transparent"
+            spellcheck="false"
+            size="10"
+          />
+          <button type="button" class="ghost tiny" id="bgClear" title="Back to transparent">
+            clear
+          </button>
+        </div>
+      </div>
+
+      <div class="field checks">
+        <label
+          ><input type="checkbox" id="titled" checked />
+          <span><code>title</code> — accessible name</span></label
+        >
+        <label
+          ><input type="checkbox" id="backdrop" />
+          <span><code>backdrop</code> — silhouette under it</span></label
+        >
+        <label><input type="checkbox" id="hover" /> <span>Reveal the flag on hover</span></label>
+      </div>
+
+      <div class="field">
+        <label for="filter">Filter</label>
+        <input
+          type="search"
+          id="filter"
+          name="filter"
+          placeholder="ps, palestine, chile"
+          spellcheck="false"
+          size="12"
+        />
+      </div>
+
+      <div class="field">
+        <label for="sort">Sort</label>
+        <select id="sort" name="sort">
+          <option value="code">Code</option>
+          <option value="name">Name</option>
+          <option value="bytes">Path bytes, heaviest first</option>
+        </select>
+      </div>
+
+      <p class="count" id="count" aria-live="polite"></p>
+    </form>
+
+    <p class="advice" id="advice" hidden>
+      <span id="advice-text"></span>
+      <button type="button" class="ghost" id="advice-fix">Switch to vector</button>
+    </p>
+
+    <!-- Measured rather than parsed, so `size` can be any CSS length and still resolve to the
+     pixels the advice above is about. -->
+    <span id="probe" aria-hidden="true"></span>
+
+    <section class="specimen">
+      <h2>At <code>1em</code>, in a line of text</h2>
+      <p id="specimen">…</p>
+      <p class="note">
+        The size of a letter is the whole claim, so it gets a control group: this line ignores the
+        size above and always draws at <code>1em</code>, inheriting the colour of the sentence
+        around it. Filter, and it sets whatever you filtered to instead.
+      </p>
+    </section>
+
+    <main id="grid" aria-busy="true"><p class="loading">Loading 242 outlines…</p></main>
+
+    <div id="detail" popover>
+      <button
+        type="button"
+        class="ghost close"
+        popovertarget="detail"
+        popovertargetaction="hide"
+        aria-label="Close"
+      >
+        ×
+      </button>
+      <div id="detail-body"></div>
+    </div>
+
+    <footer class="colophon">
+      <p>
+        Outlines from <a href="https://www.naturalearthdata.com/">Natural Earth</a>, flags from
+        <a href="https://github.com/lipis/flag-icons">flag-icons</a>.
+      </p>
+      <!--
+        The alt is load-bearing rather than decorative: the mark is the P, and the literal
+        text after it finishes the word. Drop the alt and the link is named "rinciple Stash".
+      -->
+      <a class="colophon__brand" href="https://principlestash.com/">
+        <img src="./mascot-p.svg" alt="P" width="13" height="18" />rinciple&nbsp;Stash
+      </a>
+    </footer>
+
+    <script type="module" src="./playground.js"></script>
+    <script>
+      new EventSource('/~reload').addEventListener('message', () => {
+        location.reload();
+      });
+    </script>
+  </body>
+</html>

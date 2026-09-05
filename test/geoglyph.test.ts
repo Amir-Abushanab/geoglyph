@@ -3,6 +3,7 @@ import test from 'node:test';
 import { CODES, has, load, toSvg } from '../dist/index.js';
 import { loadFlag } from '../dist/flags.js';
 import { loadFlagSvg } from '../dist/flags-svg.js';
+import { clipPathFor } from '../dist/svg.js';
 
 const subpaths = (d: string) => d.split('M').length - 1;
 function box(viewBox: string): { x: number; y: number; w: number; h: number } {
@@ -80,40 +81,67 @@ test('toSvg draws the outline alone by default', async () => {
   assert.match(svg, /width="1em" height="1em"/);
   assert.match(svg, /aria-hidden="true"/);
   assert.match(svg, /class="geoglyph-shape" fill="currentColor"/);
-  assert.doesNotMatch(svg, /<clipPath|<image/);
+  assert.doesNotMatch(svg, /<clipPath|<image|clip-path/);
 });
 
 test('a flag is clipped to the outline and stretched to its box', async () => {
   const shape = await load('CL');
   assert.ok(shape !== null);
   const svg = toSvg(shape, { flag: 'https://example.test/cl.png', size: 24, title: 'Chile' });
-  assert.match(svg, /<clipPath id="geoglyph-[a-z0-9]+">/);
-  assert.match(svg, /<image class="geoglyph-flag" clip-path="url\(#geoglyph-[a-z0-9]+\)"/);
+  assert.match(svg, /<image class="geoglyph-flag" style="clip-path:path\(&#x27;M/);
   assert.match(svg, /preserveAspectRatio="none"/);
   assert.match(svg, /width="24px" height="24px"/);
   assert.match(svg, /role="img" aria-label="Chile"/);
-  // The shape stays under the flag, so there is something to see while it loads.
-  assert.match(svg, /geoglyph-shape/);
+});
+
+test('a flag replaces the silhouette, and backdrop puts it back', async () => {
+  const shape = await load('AD');
+  assert.ok(shape !== null);
+  /* Painted under a flag the silhouette is nothing but a rim: at a boundary pixel with
+     coverage `a` the fill contributes `a(1-a)`, a quarter of it at the halfway point, all
+     the way round the glyph. Measured on Andorra at 300px that is ~200 pixels of fill
+     nobody asked for, so it is off unless something actually needs to be underneath. */
+  assert.doesNotMatch(toSvg(shape, { flag: 'a.png' }), /geoglyph-shape/);
+  assert.match(toSvg(shape, { flag: 'a.png', backdrop: true }), /geoglyph-shape/);
+  // Without a flag there is nothing to rim against, so the silhouette is the whole glyph.
+  assert.match(toSvg(shape), /geoglyph-shape/);
+  const both = toSvg(shape, { flag: 'a.png', backdrop: true });
+  assert.ok(both.indexOf('geoglyph-shape') < both.indexOf('geoglyph-flag'), 'flag paints last');
 });
 
 test('raw svg source is wrapped, an address is left alone', async () => {
   const shape = await load('PE');
   assert.ok(shape !== null);
-  const inline = toSvg(shape, { flag: '<svg viewBox="0 0 4 3"><rect width="4" height="3"/></svg>' });
+  const inline = toSvg(shape, {
+    flag: '<svg viewBox="0 0 4 3"><rect width="4" height="3"/></svg>',
+  });
   assert.match(inline, /href="data:image\/svg\+xml;utf8,%3Csvg/);
   const linked = toSvg(shape, { flag: '/flags/pe.png' });
   assert.match(linked, /href="\/flags\/pe\.png"/);
 });
 
-test('the clip id depends on the shape and nothing else', async () => {
+test('the clip carries the outline instead of pointing at it', async () => {
   const br = await load('BR');
-  const pe = await load('PE');
-  assert.ok(br !== null && pe !== null);
-  const id = (svg: string) => /id="(geoglyph-[a-z0-9]+)"/.exec(svg)?.[1];
-  // Same country twice is the same id on purpose: a shared clip clips both correctly,
-  // and a counter or a random suffix would make server and client disagree.
-  assert.equal(id(toSvg(br, { flag: 'a.png' })), id(toSvg(br, { flag: 'b.png' })));
-  assert.notEqual(id(toSvg(br, { flag: 'a.png' })), id(toSvg(pe, { flag: 'a.png' })));
+  assert.ok(br !== null);
+  const svg = toSvg(br, { flag: 'a.png' });
+  // Nothing to resolve, so nothing to dangle. A `url(#id)` clip is shared by every glyph
+  // of a country, and goes invalid for all of them the moment the copy that declared it
+  // stops being rendered — skipped offscreen, or unmounted while a twin survives. An
+  // invalid clip is no clip, so the flag would draw as a rectangle over the country.
+  assert.doesNotMatch(svg, /url\(#|<clipPath| id="/);
+  assert.equal(clipPathFor(br), `path('${br.d}')`);
+  assert.match(svg, /<image class="geoglyph-flag" style="clip-path:path\(&#x27;M/);
+});
+
+test('a quote in path data cannot break out of the css string', () => {
+  const hostile = { d: "M0 0L1 1'),url(#x)/*", viewBox: '0 0 1 1' };
+  assert.equal(clipPathFor(hostile), "path('M0 0L1 1\\'),url(#x)/*')");
+  // Escaped twice over, because it sits in two grammars: a backslash for the CSS string,
+  // an entity for the attribute holding it.
+  assert.match(
+    toSvg(hostile, { flag: 'a.png' }),
+    /clip-path:path\(&#x27;M0 0L1 1\\&#x27;\),url\(#x\)/,
+  );
 });
 
 test('markup that would break out of an attribute is escaped', async () => {

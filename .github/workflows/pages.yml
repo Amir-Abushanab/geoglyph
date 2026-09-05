@@ -1,0 +1,46 @@
+name: pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# The playground is a view of the built package, so it is worth deploying only when the
+# package is green. One run at a time, and a newer push wins.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The same gate as CI: a playground built from a package that does not pass is worse
+      # than no playground, because it looks authoritative.
+      - run: pnpm check
+
+      # Builds dist/, redraws the social card from the current geometry, and lays
+      # index.html out with dist/ and generated/ beside it — the shape `pnpm dev` serves.
+      - run: pnpm site
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

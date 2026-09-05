@@ -1,0 +1,630 @@
+/*
+ * Tokens are assigned three times on purpose — once for the system default, once for each
+ * pinned scheme — rather than through `light-dark()`, which is newer than the oldest
+ * browser worth being able to open this in. The default branch is the media query, so a
+ * page whose JS never ran still follows the system.
+ */
+:root {
+  --paper-l: #fcfcfb;
+  --paper-d: #101214;
+  --panel-l: #f2f2ef;
+  --panel-d: #181b1e;
+  --cell-l: #ffffff;
+  --cell-d: #16191c;
+  --ink-l: #16181a;
+  --ink-d: #e9e9e6;
+  --dim-l: #6a7076;
+  --dim-d: #8d949b;
+  --line-l: #e3e3de;
+  --line-d: #2a2f34;
+  --accent-l: #1d6b52;
+  --accent-d: #6fcaa4;
+  --warn-bg-l: #fdf6e6;
+  --warn-bg-d: #241f12;
+  --warn-line-l: #e8d9a8;
+  --warn-line-d: #4a3f22;
+
+  --paper: var(--paper-l);
+  --panel: var(--panel-l);
+  --cell: var(--cell-l);
+  --ink: var(--ink-l);
+  --dim: var(--dim-l);
+  --line: var(--line-l);
+  --accent: var(--accent-l);
+  --warn-bg: var(--warn-bg-l);
+  --warn-line: var(--warn-line-l);
+
+  color-scheme: light dark;
+  accent-color: var(--accent);
+
+  --glyph-bg: transparent;
+  --glyph-size: 48px;
+  --glyph-fill: currentColor;
+  --flag-opacity: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: var(--paper-d);
+    --panel: var(--panel-d);
+    --cell: var(--cell-d);
+    --ink: var(--ink-d);
+    --dim: var(--dim-d);
+    --line: var(--line-d);
+    --accent: var(--accent-d);
+    --warn-bg: var(--warn-bg-d);
+    --warn-line: var(--warn-line-d);
+  }
+}
+
+:root[data-scheme='light'] {
+  color-scheme: light;
+  --paper: var(--paper-l);
+  --panel: var(--panel-l);
+  --cell: var(--cell-l);
+  --ink: var(--ink-l);
+  --dim: var(--dim-l);
+  --line: var(--line-l);
+  --accent: var(--accent-l);
+  --warn-bg: var(--warn-bg-l);
+  --warn-line: var(--warn-line-l);
+}
+
+:root[data-scheme='dark'] {
+  color-scheme: dark;
+  --paper: var(--paper-d);
+  --panel: var(--panel-d);
+  --cell: var(--cell-d);
+  --ink: var(--ink-d);
+  --dim: var(--dim-d);
+  --line: var(--line-d);
+  --accent: var(--accent-d);
+  --mark-a: var(--mark-a-d);
+  --mark-b: var(--mark-b-d);
+  --warn-bg: var(--warn-bg-d);
+  --warn-line: var(--warn-line-d);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* An author `display` beats the UA stylesheet's `[hidden] { display: none }`, so anything
+   given one below would ignore the attribute without this. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  padding: 0 clamp(12px, 3vw, 32px) 64px;
+  background: var(--paper);
+  color: var(--ink);
+  font:
+    14px/1.5 ui-sans-serif,
+    system-ui,
+    sans-serif;
+}
+
+code,
+pre,
+.mono {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+/* Header ------------------------------------------------------------------ */
+
+.bar {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 24px 0 16px;
+}
+.bar h1 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+/* Sized in em so the mark tracks the word it sits beside. */
+.mark {
+  width: 1.15em;
+  height: 1.15em;
+  flex: none;
+}
+.tagline {
+  margin: 0;
+  color: var(--dim);
+  flex: 1 1 20ch;
+}
+
+.ghost {
+  font: inherit;
+  color: var(--ink);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Drawn rather than fetched: two paths, stroked in the button's own colour. */
+.ghost.icon {
+  padding: 5px;
+  line-height: 0;
+}
+.ghost.icon svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Settings ---------------------------------------------------------------- */
+
+.panel {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px 20px;
+  padding: 14px 16px;
+  margin-bottom: 24px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.field > label,
+.field > .legend {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.field.wide {
+  flex: 1 1 240px;
+}
+.pair {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pair input[type='range'] {
+  flex: 1 1 120px;
+  min-width: 90px;
+}
+
+.panel input[type='text'],
+.panel input[type='search'],
+.panel select {
+  font:
+    13px/1.4 ui-monospace,
+    'SF Mono',
+    Menlo,
+    monospace;
+  color: var(--ink);
+  background: var(--cell);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 7px;
+}
+.panel select {
+  font-family: inherit;
+  font-size: 13px;
+}
+.panel input:user-invalid,
+.panel input[aria-invalid='true'] {
+  border-color: #c0392b;
+}
+
+.checks {
+  gap: 6px;
+}
+.checks label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+.checks code {
+  font-size: 12px;
+}
+
+.count {
+  margin: 0 0 0 auto;
+  color: var(--dim);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.advice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: -12px 0 24px;
+  padding: 10px 14px;
+  font-size: 13px;
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-line);
+  border-radius: 8px;
+}
+.advice b {
+  font-family: ui-monospace, Menlo, monospace;
+  font-weight: 600;
+}
+.advice .ghost {
+  margin-inline-start: auto;
+  white-space: nowrap;
+}
+.ghost.tiny {
+  padding: 3px 7px;
+  font-size: 12px;
+}
+
+#probe {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  width: var(--glyph-size);
+  height: 0;
+}
+
+/* Specimen ---------------------------------------------------------------- */
+
+.specimen {
+  margin: 0 0 28px;
+  max-width: 62ch;
+}
+.specimen h2 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+  font-weight: 600;
+}
+.specimen h2 code {
+  text-transform: none;
+  letter-spacing: 0;
+}
+#specimen {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.7;
+}
+#specimen svg {
+  vertical-align: -0.14em;
+  margin-inline: 0.08em;
+}
+#specimen .rest {
+  color: var(--dim);
+  font-size: 0.8em;
+}
+.note {
+  color: var(--dim);
+  font-size: 12.5px;
+  margin: 8px 0 0;
+}
+
+/* Grid -------------------------------------------------------------------- */
+
+#grid {
+  display: grid;
+  /* Tracks widen with the glyph, so a 160px setting does not overflow a 108px cell.
+     `clamp` keeps it sane if the size is typed rather than dragged. */
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(clamp(6.5rem, calc(var(--glyph-size) + 2.75rem), 18rem), 1fr)
+  );
+  gap: 8px;
+}
+.loading {
+  grid-column: 1 / -1;
+  color: var(--dim);
+}
+
+.cell {
+  /* Containment, so re-rendering or filtering the grid reflows a cell and not the page.
+     The intrinsic size is a placeholder for the cells that are skipped while offscreen. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 7rem auto 8rem;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: end;
+  gap: 6px;
+  min-height: calc(var(--glyph-size) + 4.5rem);
+  padding: 12px 6px 8px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--glyph-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+}
+@supports not (content-visibility: auto) {
+  .cell {
+    contain: layout style paint;
+  }
+}
+.cell:hover {
+  border-color: var(--accent);
+}
+.cell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.cell .art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+}
+.cell .code {
+  font:
+    11px ui-monospace,
+    Menlo,
+    monospace;
+  letter-spacing: 0.09em;
+  color: var(--dim);
+}
+.cell .missing {
+  font-size: 11px;
+  color: var(--dim);
+}
+.cell .name {
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--dim);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The live knobs. CSS beats a presentation attribute, so these paint exactly what the
+   same values passed to `toSvg` would — without re-serialising 242 outlines per frame. */
+#grid svg {
+  width: var(--glyph-size);
+  height: var(--glyph-size);
+}
+#grid .geoglyph-shape,
+#specimen .geoglyph-shape {
+  fill: var(--glyph-fill);
+}
+#grid .geoglyph-flag,
+#specimen .geoglyph-flag {
+  opacity: var(--flag-opacity);
+  transition: opacity 150ms;
+}
+/* Both sides of this carry the id, or the reveal loses to the rule above it. */
+#grid .cell:hover .geoglyph-flag,
+#specimen svg:hover .geoglyph-flag {
+  opacity: 1;
+}
+#grid img.flag {
+  height: var(--glyph-size);
+  width: auto;
+  max-width: 100%;
+}
+
+/* Detail ------------------------------------------------------------------ */
+
+#detail {
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(80vh, 720px);
+  margin: auto;
+  padding: 20px 24px 24px;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+#detail::backdrop {
+  background: rgb(0 0 0 / 0.4);
+}
+#detail .close {
+  position: sticky;
+  top: 0;
+  float: inline-end;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.detail-head {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.detail-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.detail-head .code {
+  color: var(--dim);
+  font:
+    12px ui-monospace,
+    Menlo,
+    monospace;
+  letter-spacing: 0.09em;
+}
+.previews {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  color: var(--accent);
+}
+.previews figure {
+  margin: 0;
+  text-align: center;
+}
+.previews figcaption {
+  font-size: 11px;
+  color: var(--dim);
+  margin-top: 4px;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.facts li {
+  font-size: 12px;
+  color: var(--dim);
+}
+.facts b {
+  font-weight: 600;
+  color: var(--ink);
+  font-family: ui-monospace, Menlo, monospace;
+}
+
+.costs {
+  margin: 14px 0 0;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.costs caption {
+  text-align: start;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+  padding-bottom: 5px;
+}
+.costs th {
+  text-align: start;
+  font-weight: 400;
+  color: var(--dim);
+  padding: 3px 18px 3px 0;
+}
+.costs td {
+  text-align: end;
+  padding: 3px 0 3px 18px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.costs td:last-child {
+  color: var(--dim);
+}
+.costs b {
+  color: var(--ink);
+}
+
+.snippet {
+  margin: 18px 0 0;
+}
+.snippet-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 5px;
+}
+.snippet-head span {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.snippet pre {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 220px;
+  overflow: auto;
+  background: var(--cell);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  tab-size: 2;
+}
+
+/* Colophon ---------------------------------------------------------------- */
+
+.colophon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 48px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 12.5px;
+}
+.colophon p {
+  margin: 0;
+}
+.colophon a {
+  color: var(--dim);
+}
+.colophon a:hover {
+  color: var(--accent);
+}
+.colophon__brand {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.05em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+/* The mark ships cream-on-black, which is invisible on a light page. A filter is cheaper
+   than a second asset and keeps it a single file shared with the site it points at. */
+.colophon__brand img {
+  height: 1.15em;
+  width: auto;
+  align-self: center;
+}
+:root[data-scheme='light'] .colophon__brand img,
+:root:not([data-scheme='dark']) .colophon__brand img {
+  filter: invert(1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-scheme='light']) .colophon__brand img {
+    filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 1ms !important;
+  }
+}
