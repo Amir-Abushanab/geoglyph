@@ -1,6 +1,6 @@
 {
   "name": "geoglyph",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Every country as a mark the size of a letter: an SVG outline cropped to the landmass people recognise, and its flag to pour inside.",
   "keywords": [
     "country",
