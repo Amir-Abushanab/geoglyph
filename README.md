@@ -151,6 +151,27 @@ Two things follow:
 `w` and `h` are degrees, so shapes keep their true aspect ratio. Chile is tall, Panama is
 wide, and in a square box they letterbox.
 
+## The projection
+
+`x = lon + 180`, `y = 90 − lat`. Equirectangular, north up, and SVG user units are
+degrees.
+
+Nothing here is drawing a map. Every glyph is framed on its own and they share no
+coordinate space, so no shape is ever set against another at a common scale, and the
+Greenland-the-size-of-Africa reading a world map invites cannot arise — which is what the
+UN's September 2026 resolution on map projections asks for. An equal-area projection
+answers a question this package never puts.
+
+What it costs is shape. A degree of longitude is `cos(lat)` of a degree of latitude on the
+ground, so an outline comes out stretched east-west by `1/cos(lat)`: 1.0× on the equator,
+1.15× at 30°, 2.0× at 60°, 2.4× for Iceland. Kenya and Indonesia are true, Norway and
+Canada are wide. It is the stretch every unprojected lon/lat plot has, which is also what
+most people have seen these outlines in.
+
+Scaling `x` by the cosine of a shape's centre latitude would give it true proportions, and
+change its `viewBox`. That is a fork of `scripts/build-shapes.mjs`, not an option on
+`toSvg`.
+
 ## The two flag tiers
 
 The flag is stretched to the shape's box, not fitted inside it. Cropped to the outline of
