@@ -1,6 +1,6 @@
 # geoglyph
 
-![Twelve country outlines with their flags poured inside](./scripts/dev/strip.png)
+![Twelve country outlines with their flags poured inside](https://raw.githubusercontent.com/Amir-Abushanab/geoglyph/master/scripts/dev/strip.png)
 
 Every country as a mark the size of a letter: the outline it is recognised by, and its
 flag to pour inside.
@@ -306,4 +306,4 @@ subpath.
 ## Licence
 
 MIT. Geometry from Natural Earth (public domain), flags from flag-icons (MIT). See
-[NOTICE](./NOTICE).
+[NOTICE](https://github.com/Amir-Abushanab/geoglyph/blob/master/NOTICE).
