@@ -1,5 +1,12 @@
 # geoglyph
 
+## 0.1.2
+
+### Patch Changes
+
+- 7b56ce5: Document the projection in the README: equirectangular, what it costs in shape, and why a
+  package of separately framed glyphs has no equal-area question to answer.
+
 ## 0.1.1
 
 ### Patch Changes
