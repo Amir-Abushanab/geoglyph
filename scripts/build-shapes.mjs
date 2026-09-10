@@ -45,6 +45,16 @@ const DETAIL = 400;
     at any size a glyph is drawn, and coarser than a tenth loses the coastline. */
 const FINEST = 0.002;
 const COARSEST = 0.1;
+/** How far simplification may move a point, as a multiple of the grid. Over one, because
+    a point that moves less than the grid was going to be snapped onto it anyway. */
+const SIMPLIFY = 1.2;
+/** The same for a shape unioned out of several — see `SHAPE_FROM`. Two copies of one
+    shared border, each simplified by up to this much, drift apart by up to twice it, and a
+    drift wider than a grid cell outlives the snap: not a ragged border, which would be
+    covered by the neighbour either way, but a pinhole in the middle of the country, open
+    at every size over about 100px. The arithmetic is a guide; what settles the number is
+    that the union rasterises watertight at it, which at 1.2 it does not. */
+const SIMPLIFY_UNION = 0.5;
 /** A ring smaller than this share of the country's span is a speck, not an island. */
 const SPECK = 1 / 90;
 /** How far apart two polygons can sit and still be one landmass, as a share of the span,
@@ -169,7 +179,7 @@ const quote = (text) =>
 /** Air around the shape, as a share of its longer side, so it never sits on the edge. */
 const AIR = 0.04;
 
-export function glyphOf(rings) {
+export function glyphOf(rings, smoothing = SIMPLIFY) {
   if (rings.length === 0) return null;
   const whole = boxOf(rings.flat());
   const span = spanOf(whole);
@@ -205,7 +215,7 @@ export function glyphOf(rings) {
   const air = spanOf(frame) * AIR;
   const origin = { x: frame.minX - air, y: frame.minY - air };
   const d = kept
-    .map((part) => ringPath(simplify(part.ring, grid * 1.2), origin, grid, places))
+    .map((part) => ringPath(simplify(part.ring, grid * smoothing), origin, grid, places))
     .filter((path) => path !== null)
     .join('');
   if (d === '') return null;
@@ -240,6 +250,28 @@ const isoOf = (properties) =>
  * assignment, which is what this package has always shipped.
  */
 const POV = process.env.GEOGLYPH_POV?.toUpperCase();
+
+/**
+ * EDITORIAL. Codes whose glyph is drawn from more ground than their own feature holds.
+ * The counterpart to `FLAG_FROM` in build-flags.mjs, and like it a position rather than a
+ * fix — the one place besides that one where the geometry departs from its source on
+ * purpose.
+ *
+ * Natural Earth files this ground as three features — Israel, the West Bank, Gaza — and so
+ * makes three marks out of it: an outline with a bite taken out of its middle, a sliver,
+ * and a speck the crop then drops for sitting too far from the sliver to count as one
+ * landmass with it. Here `IL` and `PS` are both drawn from all three, so both are the whole
+ * territory between the river and the sea, and both pour the Palestinian flag into it.
+ *
+ * A union by laying the rings together rather than a true polygon union: the three are
+ * adjacent and not overlapping, so under the default nonzero fill-rule — which is what
+ * `clip-path: path(...)` uses too — the shared borders do not draw and what comes out is
+ * one silhouette. No clipping library, and the crop below sees one landmass to grow across.
+ *
+ * It is not hidden anywhere it could be mistaken for a bug: each generated module names
+ * what it was drawn from, the build prints it, and the README says so.
+ */
+const SHAPE_FROM = { IL: ['IL', 'PS'], PS: ['IL', 'PS'] };
 
 /** Where a feature's land goes under the chosen viewpoint. */
 const a3Under = (properties) =>
@@ -316,18 +348,35 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
     byCode.set(code, [...(byCode.get(code) ?? []), ...rings]);
   }
 
+  /* Applied to the finished sheet rather than while it is being read, so a union takes in
+     whatever the viewpoint above has already filed under each code, and so a code that
+     viewpoint does not draw at all is not brought back to life by being named here. Read
+     from a snapshot, so two codes drawn from each other get the same rings once each. */
+  const before = new Map(byCode);
+  const combined = [];
+  for (const [code, from] of Object.entries(SHAPE_FROM)) {
+    if (!before.has(code)) continue;
+    byCode.set(
+      code,
+      from.flatMap((part) => before.get(part) ?? []),
+    );
+    combined.push(`${code} ← ${from.join('+')}`);
+  }
+
   await rm(OUT, { recursive: true, force: true });
   await mkdir(OUT, { recursive: true });
 
   const made = [];
   let bytes = 0;
   for (const [code, rings] of [...byCode].toSorted(([a], [b]) => a.localeCompare(b))) {
-    const glyph = glyphOf(rings);
+    const from = SHAPE_FROM[code];
+    const glyph = glyphOf(rings, from === undefined ? SIMPLIFY : SIMPLIFY_UNION);
     if (glyph === null) continue;
+    const source = from === undefined ? '' : `${from.join('+')} combined (see SHAPE_FROM), `;
     const lower = code.toLowerCase();
     await writeFile(
       join(OUT, `${lower}.js`),
-      `// ${code} — generated by scripts/build-shapes.mjs. Do not edit.\n` +
+      `// ${code} — ${source}generated by scripts/build-shapes.mjs. Do not edit.\n` +
         `export const shape = { d: ${quote(glyph.d)}, viewBox: ${quote(glyph.viewBox)} };\n` +
         `export default shape;\n`,
     );
@@ -374,6 +423,7 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
       `  ${String(reassigned.length)} reassigned: ${[...new Set(reassigned)].join(', ')}`,
     );
   }
+  if (combined.length > 0) console.log(`  combined: ${combined.join(', ')}`);
   if (stateless.size > 0) {
     console.warn(
       `  no ISO code under this viewpoint, so left out: ` +

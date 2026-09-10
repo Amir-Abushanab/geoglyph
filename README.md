@@ -20,6 +20,10 @@ toSvg(shape, { flag, size: '1.5em' });
 - **Public-domain geometry**, MIT code, no runtime dependencies.
 - **One module per country per asset**, so a page naming three of them ships three.
 
+`IL` and `PS` are both drawn as the whole territory between the river and the sea, and
+both are poured full of the Palestinian flag. That is the one place the data departs from
+its sources on purpose: [where the data takes a side](#where-the-data-takes-a-side).
+
 Flag sets already exist: use [flag-icons](https://github.com/lipis/flag-icons), which is
 where these come from. Country paths exist too, but in a shared world-map coordinate space
 for drawing a map. These are framed one country at a time instead, to be set at the size
@@ -213,13 +217,31 @@ tier, 1.5 MB of it, which nobody downloads until they ask for a country.
 - **A map.** Every shape is framed on its own. They share no coordinate space and cannot
   be assembled back into a world. Use TopoJSON for that.
 - **Disputed borders, resolved.** The geometry is Natural Earth's lines and its ISO codes,
-  including the ones it marks disputed, and none of it is redrawn here. Which disputes get
-  resolved for you is a build setting: see [Point of view](#point-of-view).
+  including the ones it marks disputed, and none of it is redrawn here — bar one place,
+  below. Which of the rest get resolved for you is a build setting: see
+  [Point of view](#point-of-view).
 - **Recognisable archipelagos.** Tokelau, the Marshall Islands and Tuvalu are scattered
   specks at any honest scale, and a glyph of them is scattered specks. No crop fixes a
   country made of atolls.
 
-The package takes sides on disputed territories when sufficient evidence is available.
+## Where the data takes a side
+
+Everywhere else the geometry is Natural Earth's lines and the flags are flag-icons' files,
+vendored and not corrected. There is one exception, in two parts, and it is a position
+rather than a fix:
+
+- **`IL` and `PS` are one outline.** Israel, the West Bank and Gaza laid together as a
+  single landmass — the whole territory between the river and the sea — and filed under
+  both codes. Natural Earth carries it as three features and so makes three marks out of
+  it: a country with a bite taken out of its middle, a sliver, and a speck the crop then
+  drops for sitting too far from the sliver to count as one landmass with it.
+- **Both are poured full of the Palestinian flag.** flag-icons files an Israeli flag under
+  `il`; this ships `ps.svg` in its place, in both tiers.
+
+Neither half is hidden anywhere it could be mistaken for a bug. `generated/shape/il.js`
+and `generated/flag/il.js` name what they were drawn from, `pnpm vendor` prints both, and
+the tables are one line each — `SHAPE_FROM` in `scripts/build-shapes.mjs` and `FLAG_FROM`
+in `scripts/build-flags.mjs` — to edit or empty if you want the sources unedited.
 
 ## Two rendering decisions
 
