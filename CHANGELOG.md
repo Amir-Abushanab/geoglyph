@@ -1,5 +1,11 @@
 # geoglyph
 
+## 0.3.1
+
+### Patch Changes
+
+- 4bb93ee: Trim the README to installing, using and the API, with a few notes on how the shapes are drawn.
+
 ## 0.3.0
 
 ### Minor Changes
