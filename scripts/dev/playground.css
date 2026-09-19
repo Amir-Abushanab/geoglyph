@@ -211,6 +211,17 @@ pre,
   flex: 1 1 120px;
   min-width: 90px;
 }
+.pair output {
+  min-width: 8ch;
+  color: var(--dim);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+/* Off, the count stays on screen so you can see what ticking the box will draw. */
+.pair input:disabled,
+.pair input:disabled + output {
+  opacity: 0.45;
+}
 
 .panel input[type='text'],
 .panel input[type='search'],

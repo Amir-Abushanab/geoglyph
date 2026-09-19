@@ -21,7 +21,9 @@
  * above the registry import below.
  */
 export type { Shape, SvgOptions } from './types.js';
+export type { BlockOptions } from './blocks.js';
 export { toSvg } from './svg.js';
+export { toBlocks } from './blocks.js';
 
 import { CODES } from '../generated/codes.js';
 import type { Shape } from './types.js';

@@ -10,7 +10,7 @@
  * `toSvg` would produce. The detail panel does call `toSvg` with the real settings, and
  * that is the markup it shows you.
  */
-import { CODES, load, toSvg } from './dist/index.js';
+import { CODES, load, toBlocks, toSvg } from './dist/index.js';
 import { flagHref } from './dist/svg.js';
 import { loadFlag } from './dist/flags.js';
 import { loadFlagSvg } from './dist/flags-svg.js';
@@ -83,6 +83,8 @@ const settings = () => ({
   size: $('size').value.trim() || '1em',
   fill: $('fill').value.trim() || 'currentColor',
   className: $('className').value.trim() || 'geoglyph',
+  /* Cells along the longer side, or 0 for the outline itself. */
+  cells: $('blocks').checked ? Number($('cells').value) : 0,
   bg: $('bg').value.trim(),
   titled: $('titled').checked,
   backdrop: $('backdrop').checked,
@@ -96,6 +98,17 @@ const settings = () => ({
     .filter((term) => term !== ''),
   sort: $('sort').value,
 });
+
+/* The shape as drawn: the outline, or `toBlocks` of it. Kept per cell count, since every
+   change of setting redraws the whole grid. */
+const blocked = new Map();
+function drawn(code, current) {
+  const shape = shapes.get(code);
+  if (current.cells === 0) return shape;
+  const key = `${code}:${String(current.cells)}`;
+  if (!blocked.has(key)) blocked.set(key, toBlocks(shape, { cells: current.cells }));
+  return blocked.get(key);
+}
 
 /** The options object `toSvg` would be handed, built the way a caller would build it. */
 function optionsFor(code, current, flag) {
@@ -159,7 +172,7 @@ function artFor(code, current, flag) {
       ? '<span class="missing">no flag</span>'
       : `<img class="flag" src="${escapeAttr(flagHref(flag))}" alt="">`;
   }
-  const shape = shapes.get(code);
+  const shape = drawn(code, current);
   return toSvg(shape, optionsFor(code, current, current.draw === 'flag' ? flag : undefined));
 }
 
@@ -246,7 +259,7 @@ function renderSpecimen(current, flags, codes) {
     const flag = current.draw === 'shape' ? undefined : flags?.get(code);
     const options = optionsFor(code, current, flag);
     options.size = '1em';
-    return `${toSvg(shapes.get(code), options)}&nbsp;${escapeText(nameOf(code))}`;
+    return `${toSvg(drawn(code, current), options)}&nbsp;${escapeText(nameOf(code))}`;
   };
   const rest = codes.length - cast.length;
   $('specimen').innerHTML =
@@ -265,7 +278,7 @@ let sources = {};
 
 async function openDetail(code) {
   const current = settings();
-  const shape = shapes.get(code);
+  const shape = drawn(code, current);
   const lower = code.toLowerCase();
   const [raster, vector] = await Promise.all([loadFlag(code), loadFlagSvg(code)]);
   const flag = (current.tier === 'vector' ? vector : raster) ?? undefined;
@@ -278,8 +291,10 @@ async function openDetail(code) {
 
   /* The flag is a data URI or 177 KB of Serbian eagle; neither belongs in a snippet you
      are meant to read, so it goes back to being the identifier it was imported as. */
+  const target =
+    current.cells > 0 ? `toBlocks(shape, { cells: ${String(current.cells)} })` : 'shape';
   const call =
-    `toSvg(shape, {\n` +
+    `toSvg(${target}, {\n` +
     Object.entries(options)
       .map(([key, value]) => (key === 'flag' ? `  flag,` : `  ${key}: ${JSON.stringify(value)},`))
       .join('\n') +
@@ -295,6 +310,7 @@ async function openDetail(code) {
             : `import flag from 'geoglyph/flag-px/${lower}';`,
         ]),
     `import { toSvg } from 'geoglyph/svg';`,
+    ...(current.cells > 0 ? [`import { toBlocks } from 'geoglyph/blocks';`] : []),
   ].join('\n');
 
   sources = { imports, call, markup };
@@ -381,8 +397,34 @@ const rerender = () => {
   queued = setTimeout(() => void render(), 120);
 };
 
+/* The slider means nothing until the box is ticked, and says what it will draw either way.
+   Also run at start, since a reload can bring the box back ticked. */
+function syncBlocks() {
+  $('cells').disabled = !$('blocks').checked;
+  $('cellsValue').textContent = `${$('cells').value} cells`;
+}
+
+/* A drag across the slider passes through most of its 22 steps, and each one is a fresh
+   `toBlocks` of every country in the grid. So while it moves only the count updates; the grid
+   is redrawn once it has been still for a moment, or at once when it is let go. */
+let sliding;
+const settleCells = () => {
+  clearTimeout(sliding);
+  sliding = setTimeout(() => void render(), 250);
+};
+$('cells').addEventListener('change', () => {
+  clearTimeout(sliding);
+  clearTimeout(queued);
+  void render();
+});
+
 form.addEventListener('input', (event) => {
   const id = event.target.id;
+  if (id === 'blocks' || id === 'cells') syncBlocks();
+  if (id === 'cells') {
+    settleCells();
+    return;
+  }
   if (id === 'sizeRange') $('size').value = `${$('sizeRange').value}px`;
   if (id === 'fillPicker') $('fill').value = $('fillPicker').value;
   if (id === 'size') {
@@ -469,4 +511,5 @@ await Promise.all(
 );
 
 applyLive();
+syncBlocks();
 await render();

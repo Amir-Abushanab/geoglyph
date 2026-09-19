@@ -67,8 +67,9 @@ Version: ${pkg.version}
 
 ${entries.map((e) => `- \`${e.replace('.', 'geoglyph')}\``).join('\n')}
 
-\`geoglyph\` exports \`load\`, \`has\`, \`CODES\`, \`toSvg\`.
+\`geoglyph\` exports \`load\`, \`has\`, \`CODES\`, \`toSvg\`, \`toBlocks\`.
 \`geoglyph/svg\` exports \`toSvg\`, \`clipPathFor\`, \`flagHref\`.
+\`geoglyph/blocks\` exports \`toBlocks\`.
 \`geoglyph/react\` exports \`Glyph\`.
 \`geoglyph/flags\` exports \`loadFlag\`. \`geoglyph/flags-svg\` exports \`loadFlagSvg\`.
 
@@ -89,6 +90,11 @@ ${entries.map((e) => `- \`${e.replace('.', 'geoglyph')}\``).join('\n')}
 ## toSvg(shape, options)
 
 ${svgOptions.map((o) => `- \`${o}\` ${DOCUMENTED[o]}`).join('\n')}
+
+## toBlocks(shape, { cells })
+
+Returns a \`Shape\` snapped to square cells, \`cells\` (default 10) along the longer side.
+Pass it to \`toSvg\` or \`<Glyph>\` like any shape.
 
 ## Glyph props
 

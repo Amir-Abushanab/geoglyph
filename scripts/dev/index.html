@@ -133,6 +133,25 @@
         />
       </div>
 
+      <div class="field wide">
+        <label for="blocks">Blocks</label>
+        <div class="pair">
+          <input type="checkbox" id="blocks" name="blocks" />
+          <input
+            type="range"
+            id="cells"
+            name="cells"
+            min="3"
+            max="64"
+            step="1"
+            value="10"
+            disabled
+            aria-label="cells along the longer side"
+          />
+          <output id="cellsValue" for="cells">10 cells</output>
+        </div>
+      </div>
+
       <div class="field">
         <label for="bg">Behind the glyph</label>
         <div class="pair">

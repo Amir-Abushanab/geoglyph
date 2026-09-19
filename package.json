@@ -51,6 +51,10 @@
       "types": "./dist/react.d.ts",
       "default": "./dist/react.js"
     },
+    "./blocks": {
+      "types": "./dist/blocks.d.ts",
+      "default": "./dist/blocks.js"
+    },
     "./flags": {
       "types": "./dist/flags.d.ts",
       "default": "./dist/flags.js"

@@ -11,14 +11,16 @@ Version: 0.2.0
 - `geoglyph`
 - `geoglyph/svg`
 - `geoglyph/react`
+- `geoglyph/blocks`
 - `geoglyph/flags`
 - `geoglyph/flags-svg`
 - `geoglyph/shape/*`
 - `geoglyph/flag/*`
 - `geoglyph/flag-px/*`
 
-`geoglyph` exports `load`, `has`, `CODES`, `toSvg`.
+`geoglyph` exports `load`, `has`, `CODES`, `toSvg`, `toBlocks`.
 `geoglyph/svg` exports `toSvg`, `clipPathFor`, `flagHref`.
+`geoglyph/blocks` exports `toBlocks`.
 `geoglyph/react` exports `Glyph`.
 `geoglyph/flags` exports `loadFlag`. `geoglyph/flags-svg` exports `loadFlagSvg`.
 
@@ -44,6 +46,11 @@ Version: 0.2.0
 - `flag` `string`. A URL, a data URI, or raw `<svg>` source. Not an object.
 - `backdrop` `boolean`, default `false`. Paints the silhouette under the flag.
 - `title` `string`. Sets `role="img"` and the accessible name. Omitted, the svg is `aria-hidden`.
+
+## toBlocks(shape, { cells })
+
+Returns a `Shape` snapped to square cells, `cells` (default 10) along the longer side.
+Pass it to `toSvg` or `<Glyph>` like any shape.
 
 ## Glyph props
 

@@ -9,7 +9,8 @@
  * of them will not fetch an SVG card at all.
  *
  * The strip is the same glyphs without the words, because a README already has a title
- * above it and does not need a second one inside a picture.
+ * above it and does not need a second one inside a picture. The blocks strip is the same
+ * glyphs again through `toBlocks`, for the README's section on it.
  *
  *   node scripts/build-banner.mjs
  */
@@ -22,7 +23,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(join(root, 'package.json'));
 const sharp = require('sharp');
 
-const { load } = await import(join(root, 'dist', 'index.js'));
+const { load, toBlocks } = await import(join(root, 'dist', 'index.js'));
 const { flagHref } = await import(join(root, 'dist', 'svg.js'));
 const { loadFlagSvg } = await import(join(root, 'dist', 'flags-svg.js'));
 
@@ -48,11 +49,16 @@ const GAP = 22;
  * and ids are safe here because this file is one image with nothing else in it.
  */
 const glyphs = [];
+const blocks = [];
 for (const [i, code] of CAST.entries()) {
   const shape = await load(code);
   if (shape === null) continue;
   const flag = await loadFlagSvg(code);
-  const id = `clip-${String(i)}`;
+  glyphs.push(glyph(shape, flag, `clip-${String(i)}`));
+  blocks.push(glyph(toBlocks(shape), flag, `block-${String(i)}`));
+}
+
+function glyph(shape, flag, id) {
   /* A shape's viewBox is in degrees, so Palestine's is barely a unit across. librsvg
      rasterises a nested `<image>` in user units before scaling it, which at that size is
      about one pixel of flag smeared over the whole country. Blowing the user space up to a
@@ -64,15 +70,15 @@ for (const [i, code] of CAST.entries()) {
   /* The scale goes on the clip geometry, not on a group around the image. Inside a scaled
      group the image is still only a degree or so wide in its own units, which is the
      resolution librsvg gives it — the whole point is to hand the image a big box. */
-  glyphs.push(
+  return (
     `<svg ${box}>` +
-      (flag === null
-        ? `<path fill="${INK}" transform="scale(${String(k)})" d="${shape.d}"/>`
-        : `<defs><clipPath id="${id}">` +
-          `<path transform="scale(${String(k)})" d="${shape.d}"/></clipPath></defs>` +
-          `<image clip-path="url(#${id})" href="${flagHref(flag).replaceAll('"', '&quot;')}"` +
-          ` x="0" y="0" width="${String(w * k)}" height="${String(h * k)}" preserveAspectRatio="none"/>`) +
-      `</svg>`,
+    (flag === null
+      ? `<path fill="${INK}" transform="scale(${String(k)})" d="${shape.d}"/>`
+      : `<defs><clipPath id="${id}">` +
+        `<path transform="scale(${String(k)})" d="${shape.d}"/></clipPath></defs>` +
+        `<image clip-path="url(#${id})" href="${flagHref(flag).replaceAll('"', '&quot;')}"` +
+        ` x="0" y="0" width="${String(w * k)}" height="${String(h * k)}" preserveAspectRatio="none"/>`) +
+    `</svg>`
   );
 }
 
@@ -122,11 +128,11 @@ const render = async (svg, w, h, name) => {
    Yemen comes apart. A fixed ground is legible in both. */
 const STRIP_H = SIZE + 28;
 const stripWidth = glyphs.length * SIZE + (glyphs.length - 1) * GAP + 48;
-const strip =
+const stripOf = (row) =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="${String(stripWidth)}" height="${String(STRIP_H)}" ` +
   `viewBox="0 0 ${String(stripWidth)} ${String(STRIP_H)}">` +
   `<rect width="${String(stripWidth)}" height="${String(STRIP_H)}" rx="10" fill="${PAPER}"/>` +
-  glyphs
+  row
     .map((svg, i) => `<g transform="translate(${String(24 + i * (SIZE + GAP))} 14)">${svg}</g>`)
     .join('') +
   `</svg>`;
@@ -135,7 +141,8 @@ console.log(
   'build-banner: ' +
     [
       await render(card, WIDTH, HEIGHT, 'banner.png'),
-      await render(strip, stripWidth, STRIP_H, 'strip.png'),
+      await render(stripOf(glyphs), stripWidth, STRIP_H, 'strip.png'),
+      await render(stripOf(blocks), stripWidth, STRIP_H, 'blocks.png'),
     ].join(', ') +
     `, ${String(glyphs.length)} glyphs`,
 );
