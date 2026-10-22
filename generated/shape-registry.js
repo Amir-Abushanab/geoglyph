@@ -68,6 +68,7 @@ export const shapes = {
   ER: () => import('./shape/er.js'),
   ES: () => import('./shape/es.js'),
   ET: () => import('./shape/et.js'),
+  EU: () => import('./shape/eu.js'),
   FI: () => import('./shape/fi.js'),
   FK: () => import('./shape/fk.js'),
   FO: () => import('./shape/fo.js'),

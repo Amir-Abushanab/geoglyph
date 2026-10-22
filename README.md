@@ -17,8 +17,12 @@ import { toSvg } from 'geoglyph/svg';
 toSvg(shape, { flag, size: '1.5em' });
 ```
 
-242 countries by ISO 3166-1 alpha-2 code, with no runtime dependencies. Each country is its
-own module, so you only ship the ones you import.
+242 countries by ISO 3166-1 alpha-2 code, and the European Union, with no runtime
+dependencies. Each country is its own module, so you only ship the ones you import.
+
+`EU` is the one code that isn't a country. ISO 3166 reserves it for the Union and flag-icons
+draws its flag, so it is here as its 27 members dissolved into one outline, each cropped the
+way its own glyph is.
 
 `IL` and `PS` are both drawn as the whole territory between the river and the sea, filled
 with the Palestinian flag. Everything else is as Natural Earth and flag-icons ship it.

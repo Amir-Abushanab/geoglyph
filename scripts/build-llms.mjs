@@ -58,7 +58,7 @@ const entries = Object.keys(pkg.exports).filter((k) => k !== './package.json');
 const text = `# geoglyph
 
 > Every country as an SVG outline the size of a letter, with its flag to pour inside.
-> ${String(CODES.length)} countries, ISO 3166-1 alpha-2. ESM only, no runtime dependencies.
+> ${String(CODES.filter((code) => code !== 'EU').length)} countries, ISO 3166-1 alpha-2, and the EU. ESM only, no runtime dependencies.
 
 Playground: https://amir-abushanab.github.io/geoglyph/
 Version: ${pkg.version}
@@ -84,6 +84,8 @@ ${entries.map((e) => `- \`${e.replace('.', 'geoglyph')}\``).join('\n')}
 - \`toSvg\` returns a string of SVG markup, not an element.
 - \`<Glyph>\` takes \`shape\`, not a country code. It fetches nothing.
 - \`load\` and \`loadFlag\` return \`null\` for an unknown code. \`has(iso)\` checks first.
+- \`EU\` is the European Union, the one code that is not a country: its members in one
+  outline, with the EU flag. It is in \`CODES\` and loads like any other.
 - A flag replaces the silhouette. If you fade the flag out with CSS, pass
   \`backdrop: true\` or it fades onto the page instead of onto the shape.
 

@@ -130,6 +130,74 @@ const ringsOf = (geometry) =>
       : []
   ).map((polygon) => project(polygon[0]));
 
+/** A vertex as a string, for matching one ring's points against another's exactly. */
+const pointKey = ([x, y]) => `${String(x)} ${String(y)}`;
+
+/** Twice the area a ring encloses, signed by which way round it runs. */
+const areaOf = (ring) =>
+  ring.reduce((sum, [ax, ay], i) => {
+    const [bx, by] = ring[(i + 1) % ring.length];
+    return sum + ax * by - bx * ay;
+  }, 0);
+
+/**
+ * Neighbours dissolved into one outline: every border two of them share is dropped, and
+ * what is left is stitched back into rings. Natural Earth draws a shared border with the
+ * same vertices on both sides, so with every ring turned the same way round it appears
+ * once in each direction, and the two cancel exactly.
+ *
+ * Laying the rings together, as `SHAPE_FROM` does, fills the same ground, and is fine for
+ * three small pieces. It is not for twenty-eight countries at the coarsest grid: each copy
+ * of a border simplifies on its own, and the drift opens pinholes all along every frontier.
+ * Dissolved, there is no second copy to drift from, and none of the frontiers is drawn.
+ *
+ * Under nonzero fill, any way of chaining the surviving edges into loops fills the same
+ * ground, so where three borders meet in a point it does not matter which way the walk
+ * turns. Ground no member covers comes out as a ring running the other way — Switzerland
+ * is a hole in the Union, and stays one.
+ */
+function dissolve(rings) {
+  /** Unmatched edges, by `from>to`, each a stack in case a border is drawn twice. */
+  const open = new Map();
+  for (const ring of rings) {
+    const closed = pointKey(ring[0]) === pointKey(ring.at(-1)) ? ring.slice(0, -1) : ring;
+    const turned = areaOf(closed) < 0 ? closed.toReversed() : closed;
+    for (const [i, a] of turned.entries()) {
+      const b = turned[(i + 1) % turned.length];
+      if (pointKey(a) === pointKey(b)) continue;
+      const back = open.get(`${pointKey(b)}>${pointKey(a)}`);
+      if (back !== undefined && back.length > 0) {
+        back.pop();
+        continue;
+      }
+      const name = `${pointKey(a)}>${pointKey(b)}`;
+      open.set(name, [...(open.get(name) ?? []), [a, b]]);
+    }
+  }
+  const leaving = new Map();
+  for (const [a, b] of [...open.values()].flat()) {
+    const list = leaving.get(pointKey(a)) ?? [];
+    list.push([a, b]);
+    leaving.set(pointKey(a), list);
+  }
+  const out = [];
+  for (const list of leaving.values()) {
+    while (list.length > 0) {
+      let edge = list.pop();
+      const start = pointKey(edge[0]);
+      const ring = [edge[0]];
+      /* Every vertex is left as often as it is reached — cancelling a pair takes one of
+         each from both ends — so the walk always finds a way on until it is home. */
+      while (pointKey(edge[1]) !== start) {
+        ring.push(edge[1]);
+        edge = leaving.get(pointKey(edge[1])).pop();
+      }
+      out.push([...ring, ring[0]]);
+    }
+  }
+  return out;
+}
+
 /** Relative commands, and no separator where the sign already is one: a coastline is a
     run of short hops, so `l.3-1.2` says what `L123.4 56.7` says in a third of the room. */
 const digits = (grid) => Math.max(0, Math.ceil(-Math.log10(grid)));
@@ -179,20 +247,27 @@ const quote = (text) =>
 /** Air around the shape, as a share of its longer side, so it never sits on the edge. */
 const AIR = 0.04;
 
-export function glyphOf(rings, smoothing = SIMPLIFY) {
+/**
+ * The rings a glyph keeps — specks dropped, then the crop — with the box they make and the
+ * span of everything it was given, which is what the grid is sized to. Its own function so
+ * that a group (see `GROUPS`) can crop each member exactly as that member's glyph is cropped.
+ *
+ * `anchors` are vertices whose rings are never specks, however small: in a group, each
+ * member's own landmass, so Malta is not dropped from the Union for being Malta-sized.
+ */
+export function cropOf(rings, anchors = new Set()) {
   if (rings.length === 0) return null;
-  const whole = boxOf(rings.flat());
-  const span = spanOf(whole);
+  const span = spanOf(boxOf(rings.flat()));
   if (span === 0) return null;
-
-  const grid = clamp(span / DETAIL, FINEST, COARSEST);
-  const places = digits(grid);
 
   /* Specks first: an islet the size of the grid is a rounding artefact, and leaving it in
      lets the crop reach across an ocean through a chain of them. */
   const parts = rings
     .map((ring) => ({ ring, box: boxOf(ring) }))
-    .filter((part) => spanOf(part.box) >= span * SPECK)
+    .filter(
+      (part) =>
+        spanOf(part.box) >= span * SPECK || part.ring.some((point) => anchors.has(pointKey(point))),
+    )
     .toSorted((a, b) => spanOf(b.box) - spanOf(a.box));
   if (parts.length === 0) return null;
 
@@ -211,11 +286,28 @@ export function glyphOf(rings, smoothing = SIMPLIFY) {
       growing = true;
     }
   }
+  return { rings: kept.map((part) => part.ring), frame, span };
+}
+
+export function glyphOf(rings, smoothing = SIMPLIFY, anchors = new Set()) {
+  const crop = cropOf(rings, anchors);
+  if (crop === null) return null;
+  const { frame, span } = crop;
+
+  const grid = clamp(span / DETAIL, FINEST, COARSEST);
+  const places = digits(grid);
 
   const air = spanOf(frame) * AIR;
   const origin = { x: frame.minX - air, y: frame.minY - air };
-  const d = kept
-    .map((part) => ringPath(simplify(part.ring, grid * smoothing), origin, grid, places))
+  /* An anchor too small to survive simplifying is drawn from its every point instead, which
+     at a few grid cells across is still a handful of them. */
+  const pathOf = (ring) =>
+    ringPath(simplify(ring, grid * smoothing), origin, grid, places) ??
+    (ring.some((point) => anchors.has(pointKey(point)))
+      ? ringPath(ring, origin, grid, places)
+      : null);
+  const d = crop.rings
+    .map(pathOf)
     .filter((path) => path !== null)
     .join('');
   if (d === '') return null;
@@ -272,6 +364,28 @@ const POV = process.env.GEOGLYPH_POV?.toUpperCase();
  * what it was drawn from, the build prints it, and the README says so.
  */
 const SHAPE_FROM = { IL: ['IL', 'PS'], PS: ['IL', 'PS'] };
+
+/**
+ * Codes that are not a country but a union of them. One: `EU`, which ISO 3166 reserves
+ * exceptionally, which flag-icons draws a flag for, and which people picture as a shape of
+ * its own — not as twenty-seven.
+ *
+ * Each member is cropped first, exactly as its own glyph is — France without Réunion,
+ * Portugal without the Azores and Madeira, Spain without the Canaries — and what is left is
+ * dissolved into one outline (see `dissolve`), so the specks and the crop then run once
+ * more at the scale of the whole. That drops Bornholm and most of the Aegean, as it would
+ * for any country this size, but never a member: each one's own landmass is an anchor, so
+ * Malta stays. Åland is listed beside Finland: Natural Earth gives it a code of its own,
+ * and it is in the Union.
+ *
+ * Members are whatever the sheet has filed under their codes, so a viewpoint that gives
+ * Northern Cyprus to `CY` gives it to the Union too.
+ */
+const GROUPS = {
+  EU: 'AT AX BE BG CY CZ DE DK EE ES FI FR GR HR HU IE IT LT LU LV MT NL PL PT RO SE SI SK'.split(
+    ' ',
+  ),
+};
 
 /** Where a feature's land goes under the chosen viewpoint. */
 const a3Under = (properties) =>
@@ -363,6 +477,20 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
     combined.push(`${code} ← ${from.join('+')}`);
   }
 
+  /* After the table above, from the sheet as it now stands. Each member as its own glyph
+     crops it; a member this viewpoint does not draw is simply not there. */
+  const anchorsOf = new Map();
+  for (const [code, members] of Object.entries(GROUPS)) {
+    const crops = members.map((member) => cropOf(byCode.get(member) ?? [])).filter(Boolean);
+    const rings = dissolve(crops.flatMap((crop) => crop.rings));
+    if (rings.length === 0) continue;
+    byCode.set(code, rings);
+    /* A member's largest ring is the first its crop keeps; one vertex of it is enough to
+       find it again after the dissolve, which rebuilds every ring. */
+    anchorsOf.set(code, new Set(crops.map((crop) => pointKey(crop.rings[0][0]))));
+    combined.push(`${code} ← ${members.join('+')}`);
+  }
+
   await rm(OUT, { recursive: true, force: true });
   await mkdir(OUT, { recursive: true });
 
@@ -370,9 +498,21 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
   let bytes = 0;
   for (const [code, rings] of [...byCode].toSorted(([a], [b]) => a.localeCompare(b))) {
     const from = SHAPE_FROM[code];
-    const glyph = glyphOf(rings, from === undefined ? SIMPLIFY : SIMPLIFY_UNION);
+    const members = GROUPS[code];
+    /* A group is simplified like any country: dissolved, it has no second copy of a border
+       to drift from. */
+    const glyph = glyphOf(
+      rings,
+      from === undefined ? SIMPLIFY : SIMPLIFY_UNION,
+      anchorsOf.get(code),
+    );
     if (glyph === null) continue;
-    const source = from === undefined ? '' : `${from.join('+')} combined (see SHAPE_FROM), `;
+    const source =
+      from !== undefined
+        ? `${from.join('+')} combined (see SHAPE_FROM), `
+        : members !== undefined
+          ? `${members.join('+')} dissolved (see GROUPS), `
+          : '';
     const lower = code.toLowerCase();
     await writeFile(
       join(OUT, `${lower}.js`),
@@ -384,7 +524,7 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
     bytes += glyph.d.length;
   }
 
-  /* One declaration for every country rather than 242 identical ones: the `types`
+  /* One declaration for every country rather than 243 identical ones: the `types`
      condition in the exports map has no wildcard in it, so TypeScript reads this file
      for `geoglyph/shape/anything` and the package sheds several hundred files. */
   await writeFile(

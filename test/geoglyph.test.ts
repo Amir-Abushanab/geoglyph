@@ -9,6 +9,9 @@ import { clipPathFor, flagHref } from '../dist/svg.js';
 import brShape from 'geoglyph/shape/br';
 import brFlag from 'geoglyph/flag-px/br';
 import brFlagSvg from 'geoglyph/flag/br';
+import euShape from 'geoglyph/shape/eu';
+import euFlag from 'geoglyph/flag-px/eu';
+import euFlagSvg from 'geoglyph/flag/eu';
 
 const subpaths = (d: string) => d.split('M').length - 1;
 function box(viewBox: string): { x: number; y: number; w: number; h: number } {
@@ -61,6 +64,28 @@ test('the crop keeps what belongs and drops what is merely owned', async () => {
   const au = await load('AU');
   assert.ok(au !== null);
   assert.ok(subpaths(au.d) >= 2, 'AU lost Tasmania');
+});
+
+/*
+ * `EU` is the one code with no feature of its own in Natural Earth: its members, each
+ * cropped as its own glyph is, dissolved into one outline. It can fail the crop's two ways
+ * at the scale of a continent — an outermost region dragged back in, or a member lost — and
+ * one of its own: the members laid side by side instead of dissolved.
+ */
+test('the EU is its members in one outline, cropped like each of them', async () => {
+  assert.ok(CODES.includes('EU'));
+  assert.equal(has('eu'), true);
+  const eu = await load('eu');
+  assert.ok(eu !== null);
+  assert.deepEqual(eu, euShape);
+  const { w, h } = box(eu.viewBox);
+  // Ireland to Cyprus is 45 degrees and Crete to Lapland 35. The Canaries or the Azores
+  // would put it past 55 across, and Réunion past 100.
+  assert.ok(w < 50 && h < 42, `EU is ${eu.viewBox} — an outermost region is back`);
+  assert.ok(w > 45, `EU is ${eu.viewBox} — Ireland or Cyprus is gone`);
+  // Laid side by side, every member is a subpath at least. Dissolved, the mainland is one.
+  assert.ok(subpaths(eu.d) < 27, `EU is ${String(subpaths(eu.d))} outlines — not dissolved`);
+  assert.ok(subpaths(eu.d) >= 10, 'EU lost its islands');
 });
 
 test('the sheet carries what a coarser one drops', async () => {
@@ -161,6 +186,9 @@ test('the exports map reaches every static module', async () => {
   assert.deepEqual(brShape, await load('BR'));
   assert.equal(brFlag, await loadFlag('BR'));
   assert.equal(brFlagSvg, await loadFlagSvg('BR'));
+  assert.equal(euFlag, await loadFlag('EU'));
+  assert.equal(euFlagSvg, await loadFlagSvg('eu'));
+  assert.match(euFlagSvg, /id="flag-icons-eu"/);
 });
 
 test('an inline flag is encoded where a URL would misread it, and nowhere else', () => {

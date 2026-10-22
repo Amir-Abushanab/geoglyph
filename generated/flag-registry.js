@@ -68,6 +68,7 @@ export const flags = {
   ER: () => import('./flag/er.js'),
   ES: () => import('./flag/es.js'),
   ET: () => import('./flag/et.js'),
+  EU: () => import('./flag/eu.js'),
   FI: () => import('./flag/fi.js'),
   FK: () => import('./flag/fk.js'),
   FO: () => import('./flag/fo.js'),

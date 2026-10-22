@@ -28,7 +28,10 @@ export { toBlocks } from './blocks.js';
 import { CODES } from '../generated/codes.js';
 import type { Shape } from './types.js';
 
-/** Every ISO 3166-1 alpha-2 code this package has a glyph for, sorted. */
+/**
+ * Every ISO 3166-1 alpha-2 code this package has a glyph for, sorted. One is not a country:
+ * `EU`, which ISO 3166 reserves for the European Union, drawn as its members in one outline.
+ */
 export { CODES };
 
 const known = new Set(CODES);
@@ -43,7 +46,7 @@ export const has = (iso: string): boolean => known.has(iso.toUpperCase());
 /*
  * The three registries are reached through `import()` inside these functions rather than
  * at the top of the file, and that is load-bearing rather than stylistic. A registry is a
- * table of 242 literal dynamic imports; a bundler that can see one emits a chunk for every
+ * table of 243 literal dynamic imports; a bundler that can see one emits a chunk for every
  * country in it. Imported at module scope, all three stay reachable from this module even
  * when a consumer never calls the function that reads them — a build that only ever draws
  * silhouettes was emitting 484 flag chunks it could never request.
