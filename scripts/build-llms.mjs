@@ -7,7 +7,7 @@
  * projects: signatures, the traps, and the code list, with none of the rationale that
  * fills the README and none of which helps write a working call.
  *
- * Generated from `package.json`, the type definitions and `CODES`, and it asserts that the
+ * Generated from `package.json`, the type definitions, `CODES` and `REGIONS`, and it asserts that the
  * options it documents are the options the types declare. Add an option and forget to run
  * this and the build says so rather than shipping a reference that quietly omits it.
  *
@@ -22,7 +22,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (...parts) => readFile(join(root, ...parts), 'utf8');
 
 const pkg = JSON.parse(await read('package.json'));
-const { CODES } = await import(join(root, 'generated', 'codes.js'));
+const { CODES, REGIONS } = await import(join(root, 'generated', 'codes.js'));
 
 /* The options as the types actually declare them, so this file cannot drift from them. */
 const optionsIn = (source, block) => {
@@ -55,10 +55,26 @@ if (missing.length > 0 || extra.length > 0) {
 
 const entries = Object.keys(pkg.exports).filter((k) => k !== './package.json');
 
+/* The regions as the summary names them. A region the build adds without a name here is an
+   error, not a gap. */
+const NAMES = {
+  EU: 'the EU',
+  ASEAN: 'ASEAN',
+  EAC: 'the EAC',
+  ARAB: 'the Arab League',
+  PC: 'the Pacific Community',
+  UN: 'the world',
+};
+const unnamed = REGIONS.filter((code) => !(code in NAMES));
+if (unnamed.length > 0) throw new Error(`llms.txt has no name for ${unnamed.join(', ')}.`);
+const blocs = REGIONS.filter((code) => code !== 'UN');
+const listed = (items) =>
+  items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
+
 const text = `# geoglyph
 
 > Every country as an SVG outline the size of a letter, with its flag to pour inside.
-> ${String(CODES.length)} countries, ISO 3166-1 alpha-2. ESM only, no runtime dependencies.
+> ${String(CODES.length)} countries, ISO 3166-1 alpha-2, and ${String(REGIONS.length)} regions: ${listed(Object.values(NAMES))}. ESM only, no runtime dependencies.
 
 Playground: https://amir-abushanab.github.io/geoglyph/
 Version: ${pkg.version}
@@ -67,7 +83,7 @@ Version: ${pkg.version}
 
 ${entries.map((e) => `- \`${e.replace('.', 'geoglyph')}\``).join('\n')}
 
-\`geoglyph\` exports \`load\`, \`has\`, \`CODES\`, \`toSvg\`, \`toBlocks\`.
+\`geoglyph\` exports \`load\`, \`has\`, \`CODES\`, \`REGIONS\`, \`toSvg\`, \`toBlocks\`.
 \`geoglyph/svg\` exports \`toSvg\`, \`clipPathFor\`, \`flagHref\`.
 \`geoglyph/blocks\` exports \`toBlocks\`.
 \`geoglyph/react\` exports \`Glyph\`.
@@ -84,6 +100,10 @@ ${entries.map((e) => `- \`${e.replace('.', 'geoglyph')}\``).join('\n')}
 - \`toSvg\` returns a string of SVG markup, not an element.
 - \`<Glyph>\` takes \`shape\`, not a country code. It fetches nothing.
 - \`load\` and \`loadFlag\` return \`null\` for an unknown code. \`has(iso)\` checks first.
+- \`CODES\` is countries only. The regions are in \`REGIONS\`: ${listed(blocs.map((code) => `\`${code}\``))}
+  are blocs, their members in one outline with the bloc's flag, and \`UN\` is the world
+  with the UN flag. \`load\`, \`has\`, the flag loaders and the subpaths take a region like
+  any country.
 - A flag replaces the silhouette. If you fade the flag out with CSS, pass
   \`backdrop: true\` or it fades onto the page instead of onto the shape.
 
@@ -144,6 +164,10 @@ import flag from 'geoglyph/flag-px/br';
 ## Codes
 
 ${CODES.join(' ')}
+
+## Regions
+
+${REGIONS.join(' ')}
 `;
 
 const out = join(root, 'llms.txt');
@@ -157,6 +181,6 @@ if (process.argv.includes('--check')) {
   await writeFile(out, text);
   console.log(
     `build-llms: ${String(Math.round(text.length / 1024))}KB, ${String(svgOptions.length)} options, ` +
-      `${String(CODES.length)} codes -> llms.txt`,
+      `${String(CODES.length)} codes, ${String(REGIONS.length)} regions -> llms.txt`,
   );
 }

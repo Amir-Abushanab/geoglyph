@@ -17,8 +17,27 @@ import { toSvg } from 'geoglyph/svg';
 toSvg(shape, { flag, size: '1.5em' });
 ```
 
-242 countries by ISO 3166-1 alpha-2 code, with no runtime dependencies. Each country is its
-own module, so you only ship the ones you import.
+245 countries by ISO 3166-1 alpha-2 code, and six regions, with no runtime dependencies.
+Each country is its own module, so you only ship the ones you import.
+
+`CODES` lists the countries and only the countries, so a country picker built from it never
+shows a region. The regions are in `REGIONS`, and everything else takes them like any
+country: `load('eu')`, `has('eu')`, the flag loaders and `geoglyph/shape/eu`. flag-icons
+draws a flag for each. Five are blocs, drawn as their members dissolved into one outline,
+each member cropped the way its own glyph is:
+
+- `EU`, the European Union: its 27 members. ISO 3166 reserves the code for it.
+- `ASEAN`, the Association of Southeast Asian Nations: its 11 members, Timor-Leste included.
+- `EAC`, the East African Community: its 8 members, Somalia and the DR Congo included.
+- `ARAB`, the Arab League: its 22 members, Syria and the Comoros included.
+- `PC`, the Pacific Community, standing in for Oceania: Australia, New Zealand and the 22
+  Pacific island countries and territories. France, the UK and the US are members too, for
+  the territories they held, but their mainlands are left out, or the Pacific would be a
+  speck between them. It is drawn with the date line in the middle, and its islands, far too
+  small to see at this scale, as dots.
+
+`UN` is the world: every piece of land in one outline, filled with the UN flag. Nothing is
+cropped from it, and Antarctica is left out, as the UN emblem leaves it out.
 
 `IL` and `PS` are both drawn as the whole territory between the river and the sea, filled
 with the Palestinian flag. Everything else is as Natural Earth and flag-icons ship it.
@@ -67,7 +86,7 @@ Snaps the outline to square cells, `cells` along the longer side (default 10). A
 | `geoglyph/shape/<iso>` | `{ d, viewBox }` |
 | `geoglyph/flag/<iso>` | SVG source |
 | `geoglyph/flag-px/<iso>` | 48×36 PNG data URI |
-| `geoglyph` | `load`, `has`, `CODES`, `toSvg`, `toBlocks` |
+| `geoglyph` | `load`, `has`, `CODES`, `REGIONS`, `toSvg`, `toBlocks` |
 | `geoglyph/svg` | `toSvg`, `clipPathFor`, `flagHref` |
 | `geoglyph/blocks` | `toBlocks` |
 | `geoglyph/react` | `Glyph` |
@@ -92,6 +111,9 @@ so its stripes still read inside a narrow country.
 
 - Each country is cropped to its main landmass: the US without Alaska and Hawaii, France
   without Réunion. Nearby islands like Tasmania, Corsica and both of New Zealand stay.
+- Fiji is drawn across the date line, which cuts it in two. Kiribati and Micronesia, atolls
+  strung out over thousands of kilometres, are each their largest island: Kiritimati and
+  Pohnpei.
 - Coordinates are plain longitude and latitude, so countries far from the equator come out
   wide. Norway and Canada are stretched; Kenya and Indonesia are true.
 - No states or provinces, and the shapes don't share a coordinate space, so they can't be

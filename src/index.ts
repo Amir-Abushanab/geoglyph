@@ -25,25 +25,35 @@ export type { BlockOptions } from './blocks.js';
 export { toSvg } from './svg.js';
 export { toBlocks } from './blocks.js';
 
-import { CODES } from '../generated/codes.js';
+import { CODES, REGIONS } from '../generated/codes.js';
 import type { Shape } from './types.js';
 
-/** Every ISO 3166-1 alpha-2 code this package has a glyph for, sorted. */
+/** Every country this package has a glyph for, by ISO 3166-1 alpha-2 code, sorted. */
 export { CODES };
 
-const known = new Set(CODES);
+/**
+ * The codes that are not countries, sorted, kept out of `CODES` so a list of countries built
+ * from it has none of them in it. Five blocs, each drawn as its members in one outline —
+ * `EU`, which ISO 3166 reserves for the European Union, `ASEAN`, `EAC`, `ARAB` and `PC` —
+ * and the world, `UN`. Everything else takes them as it takes a country: `load`, `has`, the
+ * flag loaders and the `shape/`, `flag/` and `flag-px/` subpaths.
+ */
+export { REGIONS };
+
+const known = new Set([...CODES, ...REGIONS]);
 
 /**
- * Whether there is a glyph for a code, without loading anything — not the glyph, and not
- * the table of them either. Answered from `CODES`, which is a kilobyte of strings and the
- * only part of the lookup machinery that is worth having in a bundle unconditionally.
+ * Whether there is a glyph for a code, country or region, without loading anything — not
+ * the glyph, and not the table of them either. Answered from `CODES` and `REGIONS`, which
+ * are a kilobyte of strings and the only part of the lookup machinery that is worth having
+ * in a bundle unconditionally.
  */
 export const has = (iso: string): boolean => known.has(iso.toUpperCase());
 
 /*
  * The three registries are reached through `import()` inside these functions rather than
  * at the top of the file, and that is load-bearing rather than stylistic. A registry is a
- * table of 242 literal dynamic imports; a bundler that can see one emits a chunk for every
+ * table of 251 literal dynamic imports; a bundler that can see one emits a chunk for every
  * country in it. Imported at module scope, all three stay reachable from this module even
  * when a consumer never calls the function that reads them — a build that only ever draws
  * silhouettes was emitting 484 flag chunks it could never request.

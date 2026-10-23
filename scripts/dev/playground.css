@@ -420,7 +420,7 @@ pre,
 }
 
 /* The live knobs. CSS beats a presentation attribute, so these paint exactly what the
-   same values passed to `toSvg` would — without re-serialising 242 outlines per frame. */
+   same values passed to `toSvg` would — without re-serialising 251 outlines per frame. */
 #grid svg {
   width: var(--glyph-size);
   height: var(--glyph-size);

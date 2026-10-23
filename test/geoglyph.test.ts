@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CODES, has, load, toSvg } from '../dist/index.js';
+import { CODES, REGIONS, has, load, toSvg } from '../dist/index.js';
 import { loadFlag } from '../dist/flags.js';
 import { loadFlagSvg } from '../dist/flags-svg.js';
 import { clipPathFor, flagHref } from '../dist/svg.js';
@@ -9,6 +9,9 @@ import { clipPathFor, flagHref } from '../dist/svg.js';
 import brShape from 'geoglyph/shape/br';
 import brFlag from 'geoglyph/flag-px/br';
 import brFlagSvg from 'geoglyph/flag/br';
+import euShape from 'geoglyph/shape/eu';
+import euFlag from 'geoglyph/flag-px/eu';
+import euFlagSvg from 'geoglyph/flag/eu';
 
 const subpaths = (d: string) => d.split('M').length - 1;
 function box(viewBox: string): { x: number; y: number; w: number; h: number } {
@@ -18,7 +21,7 @@ function box(viewBox: string): { x: number; y: number; w: number; h: number } {
 
 test('every code loads a shape framed at its own origin', async () => {
   assert.ok(CODES.length > 200, `only ${String(CODES.length)} codes`);
-  for (const code of CODES) {
+  for (const code of [...CODES, ...REGIONS]) {
     const shape = await load(code);
     assert.ok(shape !== null, `${code} has no shape`);
     const { x, y, w, h } = box(shape.viewBox);
@@ -26,6 +29,18 @@ test('every code loads a shape framed at its own origin', async () => {
     assert.equal(y, 0);
     assert.ok(w > 0 && h > 0, `${code} is ${shape.viewBox}`);
     assert.ok(shape.d.startsWith('M'), `${code} path starts ${shape.d.slice(0, 8)}`);
+  }
+});
+
+/* A country picker is built from `CODES`, so nothing that is not a country belongs in it,
+   while everything that takes a code takes a region as readily. */
+test('CODES is countries only, and the regions are apart in REGIONS', async () => {
+  assert.deepEqual(REGIONS, ['ARAB', 'ASEAN', 'EAC', 'EU', 'PC', 'UN']);
+  for (const code of CODES) assert.match(code, /^[A-Z]{2}$/, `${code} is not an alpha-2 code`);
+  for (const code of REGIONS) {
+    assert.ok(!CODES.includes(code), `${code} is in CODES`);
+    assert.equal(has(code.toLowerCase()), true, `has('${code.toLowerCase()}')`);
+    assert.ok(await load(code), `${code} does not load`);
   }
 });
 
@@ -63,14 +78,124 @@ test('the crop keeps what belongs and drops what is merely owned', async () => {
   assert.ok(subpaths(au.d) >= 2, 'AU lost Tasmania');
 });
 
+/*
+ * `EU` is the one code with no feature of its own in Natural Earth: its members, each
+ * cropped as its own glyph is, dissolved into one outline. It can fail the crop's two ways
+ * at the scale of a continent — an outermost region dragged back in, or a member lost — and
+ * one of its own: the members laid side by side instead of dissolved.
+ */
+test('the EU is its members in one outline, cropped like each of them', async () => {
+  assert.ok(REGIONS.includes('EU'));
+  assert.equal(has('eu'), true);
+  const eu = await load('eu');
+  assert.ok(eu !== null);
+  assert.deepEqual(eu, euShape);
+  const { w, h } = box(eu.viewBox);
+  // Ireland to Cyprus is 45 degrees and Crete to Lapland 35. The Canaries or the Azores
+  // would put it past 55 across, and Réunion past 100.
+  assert.ok(w < 50 && h < 42, `EU is ${eu.viewBox} — an outermost region is back`);
+  assert.ok(w > 45, `EU is ${eu.viewBox} — Ireland or Cyprus is gone`);
+  // Laid side by side, every member is a subpath at least. Dissolved, the mainland is one.
+  assert.ok(subpaths(eu.d) < 27, `EU is ${String(subpaths(eu.d))} outlines — not dissolved`);
+  assert.ok(subpaths(eu.d) >= 10, 'EU lost its islands');
+});
+
+/* The blocs after it are drawn the same way, and fail the same ways: a member lost, or one
+   dragged in from too far. Their codes run past two letters, which no country's does. */
+test('ASEAN is Southeast Asia from Myanmar to Papua', async () => {
+  assert.ok(REGIONS.includes('ASEAN'));
+  assert.equal(has('asean'), true);
+  const asean = await load('asean');
+  assert.ok(asean !== null);
+  const { w, h } = box(asean.viewBox);
+  // Myanmar's coast to Papua's border is 49 degrees across, and Kachin to Rote 40 down.
+  assert.ok(w > 50 && w < 56, `ASEAN is ${asean.viewBox} — Myanmar or Papua is gone`);
+  assert.ok(h > 40 && h < 46, `ASEAN is ${asean.viewBox} — Kachin or the Lesser Sundas is gone`);
+  assert.ok(subpaths(asean.d) >= 20, 'ASEAN lost its islands');
+});
+
+test('the EAC is East Africa from the Congo to the Horn', async () => {
+  assert.ok(REGIONS.includes('EAC'));
+  const eac = await load('eac');
+  assert.ok(eac !== null);
+  const { w, h } = box(eac.viewBox);
+  // The Congo's Atlantic coast to Somalia's eastern tip is 39 degrees, South Sudan's north
+  // to Katanga 26.
+  assert.ok(w > 40 && w < 45, `EAC is ${eac.viewBox} — the DR Congo or Somalia is gone`);
+  assert.ok(h > 26 && h < 32, `EAC is ${eac.viewBox} — South Sudan or the south is gone`);
+});
+
+/* A member out of the crop's reach of every other is a member all the same. */
+test('the Arab League runs from Mauritania to Oman, the Comoros in', async () => {
+  assert.ok(REGIONS.includes('ARAB'));
+  const arab = await load('arab');
+  assert.ok(arab !== null);
+  const { w, h } = box(arab.viewBox);
+  // Mauritania's coast to Oman's is 77 degrees across.
+  assert.ok(w > 80 && w < 86, `ARAB is ${arab.viewBox} — Mauritania or Oman is gone`);
+  // Syria to Somalia is 39 degrees down, and to the Comoros 50.
+  assert.ok(h > 52 && h < 58, `ARAB is ${arab.viewBox} — the Comoros is gone`);
+});
+
+/*
+ * The Pacific Community fails in two ways of its own. Cut at the date line, as the plain
+ * projection cuts it, it spans the whole world with nothing in the middle; and at its scale
+ * most of its members are specks, which it keeps, as dots, rather than drop.
+ */
+test('the Pacific Community is one ocean, every member in it', async () => {
+  assert.ok(REGIONS.includes('PC'));
+  const pc = await load('pc');
+  assert.ok(pc !== null);
+  const { w } = box(pc.viewBox);
+  // Western Australia to Pitcairn is 119 degrees across the date line, and 241 round the
+  // other way.
+  assert.ok(w < 135, `PC is ${pc.viewBox} — cut at the date line`);
+  assert.ok(w > 120, `PC is ${pc.viewBox} — Pitcairn or Western Australia is gone`);
+  // Twenty-four members drawn, each at least one outline.
+  assert.ok(subpaths(pc.d) >= 24, `PC is ${String(subpaths(pc.d))} outlines — a member is gone`);
+});
+
+/* The world is one shape, not two hundred laid side by side, and Antarctica, left in, is
+   the largest ring on the sheet and the only one the crop keeps. */
+test('UN is the whole world but Antarctica, in one outline', async () => {
+  assert.ok(REGIONS.includes('UN'));
+  const un = await load('un');
+  assert.ok(un !== null);
+  const { w, h } = box(un.viewBox);
+  // A whole turn across, and Greenland to Tierra del Fuego 139 degrees down, each with 29
+  // of air. Antarctica alone would be 56 down, and the world with it 209.
+  assert.ok(w > 380, `UN is ${un.viewBox} — a continent is gone`);
+  assert.ok(h > 160 && h < 180, `UN is ${un.viewBox} — Antarctica is back`);
+  assert.ok(subpaths(un.d) < 100, `UN is ${String(subpaths(un.d))} outlines — not dissolved`);
+});
+
 test('the sheet carries what a coarser one drops', async () => {
   for (const code of ['DM', 'GF', 'GD', 'MT', 'SG']) {
     assert.ok(await load(code), `${code} missing — the 110m sheet rounds it away`);
   }
 });
 
+/*
+ * The three the crop once kept nothing of. Fiji, cut in two by the date line, is every
+ * island a speck beside a span of 360 degrees unless it is drawn the other way round; Kiribati
+ * and Micronesia are every island a speck beside their chains, so each is its largest.
+ */
+test('the Pacific countries the crop kept nothing of are there', async () => {
+  const fj = await load('FJ');
+  assert.ok(fj !== null, 'FJ missing — the date line cut it in two');
+  // Viti Levu to Vanua Levu's tip at the date line is three degrees.
+  assert.ok(box(fj.viewBox).w < 5, `FJ is ${fj.viewBox} — drawn round the world`);
+  assert.ok(subpaths(fj.d) >= 2, 'FJ lost Vanua Levu');
+  for (const code of ['KI', 'FM']) {
+    const shape = await load(code);
+    assert.ok(shape !== null, `${code} missing — every island a speck`);
+    // Kiritimati and Pohnpei are each under half a degree across.
+    assert.ok(box(shape.viewBox).w < 0.6, `${code} is ${shape.viewBox} — more than one island`);
+  }
+});
+
 test('every glyph has both tiers of flag', async () => {
-  for (const code of CODES) {
+  for (const code of [...CODES, ...REGIONS]) {
     const raster = await loadFlag(code);
     const vector = await loadFlagSvg(code);
     assert.ok(raster?.startsWith('data:image/png;base64,'), `${code} raster`);
@@ -161,6 +286,9 @@ test('the exports map reaches every static module', async () => {
   assert.deepEqual(brShape, await load('BR'));
   assert.equal(brFlag, await loadFlag('BR'));
   assert.equal(brFlagSvg, await loadFlagSvg('BR'));
+  assert.equal(euFlag, await loadFlag('EU'));
+  assert.equal(euFlagSvg, await loadFlagSvg('eu'));
+  assert.match(euFlagSvg, /id="flag-icons-eu"/);
 });
 
 test('an inline flag is encoded where a URL would misread it, and nowhere else', () => {

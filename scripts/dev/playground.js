@@ -4,16 +4,19 @@
  * change to `toSvg` shows up on screen and a change to the crop shows up in the grid.
  *
  * One thing is deliberately not re-rendered. `size` and `fill` are pushed to the page as
- * custom properties instead of re-serialising 242 outlines on every frame of a slider
+ * custom properties instead of re-serialising 251 outlines on every frame of a slider
  * drag. That is not a cheat: both land on a presentation attribute, which sits below any
  * stylesheet in the cascade, so the pixels are the same ones the same values passed to
  * `toSvg` would produce. The detail panel does call `toSvg` with the real settings, and
  * that is the markup it shows you.
  */
-import { CODES, load, toBlocks, toSvg } from './dist/index.js';
+import { CODES, REGIONS, load, toBlocks, toSvg } from './dist/index.js';
 import { flagHref } from './dist/svg.js';
 import { loadFlag } from './dist/flags.js';
 import { loadFlagSvg } from './dist/flags-svg.js';
+
+/* Every glyph on one page: the countries, then the regions after them. */
+const ALL = [...CODES, ...REGIONS];
 
 const $ = (id) => document.getElementById(id);
 const grid = $('grid');
@@ -44,10 +47,20 @@ const sizeOf = (text) => encoder.encode(text).length;
  */
 const RENAMED = { IL: 'Occupied Palestine' };
 
-/* The package ships codes, not names — the browser already has the table. */
+/* The package ships codes, not names — the browser already has the table. It has one for
+   `EU` too, but not for the other blocs, which are not regions to it, and it calls `UN` the
+   United Nations, where the glyph is the world. */
 const regions = new Intl.DisplayNames(['en'], { type: 'region' });
+const BLOCS = {
+  ASEAN: 'ASEAN',
+  EAC: 'East African Community',
+  ARAB: 'Arab League',
+  PC: 'Pacific Community',
+  UN: 'World',
+};
 const nameOf = (code) => {
   if (code in RENAMED) return RENAMED[code];
+  if (code in BLOCS) return BLOCS[code];
   try {
     return regions.of(code) ?? code;
   } catch {
@@ -66,7 +79,7 @@ async function flagsFor(tier) {
   if (cache.size === 0) {
     const get = loaderByTier[tier];
     await Promise.all(
-      CODES.map(async (code) => {
+      ALL.map(async (code) => {
         const flag = await get(code);
         if (flag !== null) cache.set(code, flag);
       }),
@@ -188,7 +201,7 @@ function visible(current) {
       : code.toLowerCase().includes(term) || nameOf(code).toLowerCase().includes(term);
   const matches = (code) =>
     current.terms.length === 0 || current.terms.some((term) => hit(code, term));
-  const codes = CODES.filter(matches);
+  const codes = ALL.filter(matches);
   if (current.sort === 'name') return codes.toSorted((a, b) => nameOf(a).localeCompare(nameOf(b)));
   if (current.sort === 'bytes')
     return codes.toSorted((a, b) => shapes.get(b).d.length - shapes.get(a).d.length);
@@ -231,7 +244,7 @@ async function render() {
   const flagBytes =
     flags === null ? 0 : codes.reduce((total, code) => total + sizeOf(flags.get(code) ?? ''), 0);
   $('count').innerHTML =
-    `${String(codes.length)} of ${String(CODES.length)} · ` +
+    `${String(codes.length)} of ${String(ALL.length)} · ` +
     (flags === null
       ? `<b>${bytes(pathBytes)}</b> of outlines`
       : `${bytes(pathBytes)} outlines + ${bytes(flagBytes)} ${current.tier} flags ` +
@@ -389,7 +402,7 @@ detail.addEventListener('click', async (event) => {
   }, 1200);
 });
 
-/** Structural changes rebuild the grid; a keystroke in the filter should not do that 242
+/** Structural changes rebuild the grid; a keystroke in the filter should not do that 251
     times on the way to a word. */
 let queued;
 const rerender = () => {
@@ -504,7 +517,7 @@ applyScheme(document.documentElement.dataset.scheme ?? null);
 /* ---- go ------------------------------------------------------------------ */
 
 await Promise.all(
-  CODES.map(async (code) => {
+  ALL.map(async (code) => {
     const shape = await load(code);
     if (shape !== null) shapes.set(code, shape);
   }),
