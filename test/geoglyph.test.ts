@@ -125,6 +125,24 @@ test('the Arab League runs from Mauritania to Oman, the Comoros in', async () =>
   assert.ok(h > 52 && h < 58, `ARAB is ${arab.viewBox} — the Comoros is gone`);
 });
 
+/*
+ * The Pacific Community fails in two ways of its own. Cut at the date line, as the plain
+ * projection cuts it, it spans the whole world with nothing in the middle; and at its scale
+ * most of its members are specks, which it keeps, as dots, rather than drop.
+ */
+test('the Pacific Community is one ocean, every member in it', async () => {
+  assert.ok(CODES.includes('PC'));
+  const pc = await load('pc');
+  assert.ok(pc !== null);
+  const { w } = box(pc.viewBox);
+  // Western Australia to Pitcairn is 119 degrees across the date line, and 241 round the
+  // other way.
+  assert.ok(w < 135, `PC is ${pc.viewBox} — cut at the date line`);
+  assert.ok(w > 120, `PC is ${pc.viewBox} — Pitcairn or Western Australia is gone`);
+  // Twenty-four members drawn, each at least one outline.
+  assert.ok(subpaths(pc.d) >= 24, `PC is ${String(subpaths(pc.d))} outlines — a member is gone`);
+});
+
 test('the sheet carries what a coarser one drops', async () => {
   for (const code of ['DM', 'GF', 'GD', 'MT', 'SG']) {
     assert.ok(await load(code), `${code} missing — the 110m sheet rounds it away`);

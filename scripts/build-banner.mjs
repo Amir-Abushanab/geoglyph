@@ -109,7 +109,7 @@ const card =
   `<text x="74" y="168" font-family="${font}" font-size="28" fill="${DIM}">` +
   `Every country as a mark the size of a letter.</text>` +
   `<text x="74" y="212" font-family="${font}" font-size="21" fill="${DIM}">` +
-  `246 outlines, cropped to the landmass each one is recognised by — and its flag to pour inside.</text>` +
+  `247 outlines, cropped to the landmass each one is recognised by — and its flag to pour inside.</text>` +
   placed +
   `</svg>`;
 

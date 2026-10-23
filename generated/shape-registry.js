@@ -170,6 +170,7 @@ export const shapes = {
   NZ: () => import('./shape/nz.js'),
   OM: () => import('./shape/om.js'),
   PA: () => import('./shape/pa.js'),
+  PC: () => import('./shape/pc.js'),
   PE: () => import('./shape/pe.js'),
   PF: () => import('./shape/pf.js'),
   PG: () => import('./shape/pg.js'),

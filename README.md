@@ -17,16 +17,21 @@ import { toSvg } from 'geoglyph/svg';
 toSvg(shape, { flag, size: '1.5em' });
 ```
 
-242 countries by ISO 3166-1 alpha-2 code, and four blocs of them, with no runtime
+242 countries by ISO 3166-1 alpha-2 code, and five blocs of them, with no runtime
 dependencies. Each country is its own module, so you only ship the ones you import.
 
-Four codes aren't countries. flag-icons draws a flag for each, so they are here as their
+Five codes aren't countries. flag-icons draws a flag for each, so they are here as their
 members dissolved into one outline, each member cropped the way its own glyph is:
 
 - `EU`, the European Union: its 27 members. ISO 3166 reserves the code for it.
 - `ASEAN`, the Association of Southeast Asian Nations: its 11 members, Timor-Leste included.
 - `EAC`, the East African Community: its 8 members, Somalia and the DR Congo included.
 - `ARAB`, the Arab League: its 22 members, Syria and the Comoros included.
+- `PC`, the Pacific Community, standing in for Oceania: Australia, New Zealand and the 22
+  Pacific island countries and territories. France, the UK and the US are members too, for
+  the territories they held, but their mainlands are left out, or the Pacific would be a
+  speck between them. It is drawn with the date line in the middle, and its islands, far too
+  small to see at this scale, as dots.
 
 `IL` and `PS` are both drawn as the whole territory between the river and the sea, filled
 with the Palestinian flag. Everything else is as Natural Earth and flag-icons ship it.

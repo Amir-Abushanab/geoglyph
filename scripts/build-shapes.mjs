@@ -414,7 +414,64 @@ const GROUPS = {
      from Somalia, is out of the crop's reach of any other member, and stays because it is
      one (see `cropOf`). */
   ARAB: 'AE BH DJ DZ EG IQ JO KM KW LB LY MA MR OM PS QA SA SD SO SY TN YE'.split(' '),
+  /* The Pacific Community, which stands in here for Oceania: Australia, New Zealand and the
+     22 Pacific island countries and territories among its 27 members (spc.int/our-members).
+     The other three are France, the United Kingdom and the United States, founding members
+     for the territories they held in 1947, and they are left out: drawn whole, their
+     mainlands would put the Community's outline across half the world and leave the Pacific
+     a speck in it; cropped as their own glyphs are, they are Europe and North America and
+     not their islands either way. Their territories that are members in their own right —
+     New Caledonia, French Polynesia, Wallis and Futuna, Pitcairn, Guam, American Samoa, the
+     Northern Marianas — are in.
+
+     It straddles the date line, so it is drawn with the line in the middle (see `DATELINE`),
+     and most of its members are islands far smaller than a speck at its scale, so they are
+     dots (see `dotted`). */
+  PC: 'AS AU CK FJ FM GU KI MH MP NC NR NU NZ PF PG PN PW SB TK TO TV VU WF WS'.split(' '),
 };
+
+/**
+ * Groups drawn with the date line in the middle rather than at both edges. The projection
+ * puts the seam at 180°, which suits every country but the few it cuts in two, and a group
+ * of Pacific islands is nothing but those: west of the line from Palau to Tuvalu, east of it
+ * from Samoa to Pitcairn. Moving everything west of Greenwich a whole turn east draws them
+ * as one ocean, and each member is cropped there too — Fiji included, which in the plain
+ * projection is two halves 360° apart and so has no glyph of its own.
+ */
+const DATELINE = new Set(['PC']);
+
+/** A ring a whole turn east if it lies west of Greenwich. Natural Earth cuts every ring at
+    the date line, so none straddles it, and the two halves of one cut meet again at exactly
+    360, where `dissolve` closes the seam. */
+const eastward = (ring) =>
+  ring.every(([x]) => x < 180) ? ring.map(([x, y]) => [x + 360, y]) : ring;
+
+/**
+ * Members as a group draws them, for a group that is mostly islands too small to see. Where
+ * more than half its members' landmasses are smaller than a speck at the scale of the whole,
+ * each of those is a dot a speck across, centred where the member's own landmass is: the
+ * smallest island the glyph would keep of its own accord, and how a map of the Pacific
+ * marks Tuvalu. Kept true to size they are there in the path and gone at any size it is
+ * drawn at, which leaves the Pacific Community as Australia, New Zealand and New Guinea.
+ *
+ * Only then: the EU has one member that small, Malta, and the Arab League two, and each of
+ * them keeps its own outline, which is what an island the size of a speck looks like.
+ */
+function dotted(crops) {
+  const speck = spanOf(boxOf(crops.flatMap((crop) => crop.rings).flat())) * SPECK;
+  const small = crops.filter((crop) => spanOf(boxOf(crop.rings[0])) < speck);
+  if (small.length * 2 <= crops.length) return crops;
+  return crops.map((crop) => {
+    if (!small.includes(crop)) return crop;
+    const { minX, maxX, minY, maxY } = boxOf(crop.rings[0]);
+    const [x, y, r] = [(minX + maxX) / 2, (minY + maxY) / 2, speck / 2];
+    const dot = Array.from({ length: 13 }, (_, i) => {
+      const turn = ((i % 12) * Math.PI) / 6;
+      return [x + r * Math.cos(turn), y + r * Math.sin(turn)];
+    });
+    return { rings: [dot] };
+  });
+}
 
 /** Where a feature's land goes under the chosen viewpoint. */
 const a3Under = (properties) =>
@@ -510,7 +567,20 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
      crops it; a member this viewpoint does not draw is simply not there. */
   const anchorsOf = new Map();
   for (const [code, members] of Object.entries(GROUPS)) {
-    const crops = members.map((member) => cropOf(byCode.get(member) ?? [])).filter(Boolean);
+    const sheetOf = (member) =>
+      (byCode.get(member) ?? []).map((ring) => (DATELINE.has(code) ? eastward(ring) : ring));
+    /* A member whose own crop keeps nothing is its largest island. That is Micronesia and
+       Kiribati, which have no glyph of their own: every island in each is a speck beside
+       the span of its chain. */
+    const largestOf = (rings) =>
+      rings.length === 0
+        ? null
+        : { rings: [rings.toSorted((a, b) => spanOf(boxOf(b)) - spanOf(boxOf(a)))[0]] };
+    const crops = dotted(
+      members
+        .map((member) => cropOf(sheetOf(member)) ?? largestOf(sheetOf(member)))
+        .filter(Boolean),
+    );
     const rings = dissolve(crops.flatMap((crop) => crop.rings));
     if (rings.length === 0) continue;
     byCode.set(code, rings);
@@ -553,7 +623,7 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
     bytes += glyph.d.length;
   }
 
-  /* One declaration for every country rather than 246 identical ones: the `types`
+  /* One declaration for every country rather than 247 identical ones: the `types`
      condition in the exports map has no wildcard in it, so TypeScript reads this file
      for `geoglyph/shape/anything` and the package sheds several hundred files. */
   await writeFile(

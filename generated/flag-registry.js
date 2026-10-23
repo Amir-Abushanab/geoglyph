@@ -170,6 +170,7 @@ export const flags = {
   NZ: () => import('./flag/nz.js'),
   OM: () => import('./flag/om.js'),
   PA: () => import('./flag/pa.js'),
+  PC: () => import('./flag/pc.js'),
   PE: () => import('./flag/pe.js'),
   PF: () => import('./flag/pf.js'),
   PG: () => import('./flag/pg.js'),

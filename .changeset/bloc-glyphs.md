@@ -17,3 +17,10 @@ Add `ARAB`, the League of Arab States: its 22 members, Syria included, with flag
 own glyphs are, and Palestine as its own glyph is. The Comoros stays though it is far from
 every other member: a member of a bloc is now never cropped out of it for distance, as it
 was never dropped for size.
+
+Add `PC`, the Pacific Community, standing in for Oceania: Australia, New Zealand and the 22
+Pacific island countries and territories among its 27 members, with flag-icons' `pc.svg`.
+France, the United Kingdom and the United States are members too but are not drawn, or the
+Pacific would be a speck between their mainlands. It is drawn with the date line in the
+middle, so Fiji, Kiribati and the islands either side of it are one ocean, and its members
+too small to see at that scale, Tuvalu to Pitcairn, are dots.
