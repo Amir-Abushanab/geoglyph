@@ -10,10 +10,13 @@
  * `toSvg` would produce. The detail panel does call `toSvg` with the real settings, and
  * that is the markup it shows you.
  */
-import { CODES, load, toBlocks, toSvg } from './dist/index.js';
+import { CODES, REGIONS, load, toBlocks, toSvg } from './dist/index.js';
 import { flagHref } from './dist/svg.js';
 import { loadFlag } from './dist/flags.js';
 import { loadFlagSvg } from './dist/flags-svg.js';
+
+/* Every glyph on one page: the countries, then the regions after them. */
+const ALL = [...CODES, ...REGIONS];
 
 const $ = (id) => document.getElementById(id);
 const grid = $('grid');
@@ -76,7 +79,7 @@ async function flagsFor(tier) {
   if (cache.size === 0) {
     const get = loaderByTier[tier];
     await Promise.all(
-      CODES.map(async (code) => {
+      ALL.map(async (code) => {
         const flag = await get(code);
         if (flag !== null) cache.set(code, flag);
       }),
@@ -198,7 +201,7 @@ function visible(current) {
       : code.toLowerCase().includes(term) || nameOf(code).toLowerCase().includes(term);
   const matches = (code) =>
     current.terms.length === 0 || current.terms.some((term) => hit(code, term));
-  const codes = CODES.filter(matches);
+  const codes = ALL.filter(matches);
   if (current.sort === 'name') return codes.toSorted((a, b) => nameOf(a).localeCompare(nameOf(b)));
   if (current.sort === 'bytes')
     return codes.toSorted((a, b) => shapes.get(b).d.length - shapes.get(a).d.length);
@@ -241,7 +244,7 @@ async function render() {
   const flagBytes =
     flags === null ? 0 : codes.reduce((total, code) => total + sizeOf(flags.get(code) ?? ''), 0);
   $('count').innerHTML =
-    `${String(codes.length)} of ${String(CODES.length)} · ` +
+    `${String(codes.length)} of ${String(ALL.length)} · ` +
     (flags === null
       ? `<b>${bytes(pathBytes)}</b> of outlines`
       : `${bytes(pathBytes)} outlines + ${bytes(flagBytes)} ${current.tier} flags ` +
@@ -514,7 +517,7 @@ applyScheme(document.documentElement.dataset.scheme ?? null);
 /* ---- go ------------------------------------------------------------------ */
 
 await Promise.all(
-  CODES.map(async (code) => {
+  ALL.map(async (code) => {
     const shape = await load(code);
     if (shape !== null) shapes.set(code, shape);
   }),

@@ -12,11 +12,11 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const { CODES, load, toSvg } = await import(join(root, 'dist', 'index.js'));
+const { CODES, REGIONS, load, toSvg } = await import(join(root, 'dist', 'index.js'));
 const { loadFlag } = await import(join(root, 'dist', 'flags.js'));
 
 const cells = [];
-for (const code of CODES) {
+for (const code of [...CODES, ...REGIONS]) {
   const shape = await load(code);
   const flag = await loadFlag(code);
   cells.push(
@@ -36,4 +36,4 @@ await writeFile(
     figcaption { margin-block-start: 4px; color: #666; letter-spacing: 0.08em }
   </style><main>${cells.join('')}</main>`,
 );
-console.log(`contact-sheet: ${String(CODES.length)} glyphs → sheet.html`);
+console.log(`contact-sheet: ${String(CODES.length + REGIONS.length)} glyphs → sheet.html`);

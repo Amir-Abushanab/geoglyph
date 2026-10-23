@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CODES, load, toBlocks, toSvg } from '../dist/index.js';
+import { CODES, REGIONS, load, toBlocks, toSvg } from '../dist/index.js';
 import { clipPathFor } from '../dist/svg.js';
 /* Through the package's own name, the entry point a consumer who wants only this imports. */
 import { toBlocks as fromSubpath } from 'geoglyph/blocks';
@@ -48,8 +48,8 @@ test('an island too small to fill a cell still keeps one', () => {
   assert.ok(cellsOf(blocks.d).has('8,8'), 'the island fell through the grid');
 });
 
-test('every country draws at least one cell, inside its own box', async () => {
-  for (const code of CODES) {
+test('every glyph draws at least one cell, inside its own box', async () => {
+  for (const code of [...CODES, ...REGIONS]) {
     const shape = await load(code);
     assert.ok(shape !== null);
     const blocks = toBlocks(shape);

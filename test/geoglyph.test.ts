@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CODES, has, load, toSvg } from '../dist/index.js';
+import { CODES, REGIONS, has, load, toSvg } from '../dist/index.js';
 import { loadFlag } from '../dist/flags.js';
 import { loadFlagSvg } from '../dist/flags-svg.js';
 import { clipPathFor, flagHref } from '../dist/svg.js';
@@ -21,7 +21,7 @@ function box(viewBox: string): { x: number; y: number; w: number; h: number } {
 
 test('every code loads a shape framed at its own origin', async () => {
   assert.ok(CODES.length > 200, `only ${String(CODES.length)} codes`);
-  for (const code of CODES) {
+  for (const code of [...CODES, ...REGIONS]) {
     const shape = await load(code);
     assert.ok(shape !== null, `${code} has no shape`);
     const { x, y, w, h } = box(shape.viewBox);
@@ -29,6 +29,18 @@ test('every code loads a shape framed at its own origin', async () => {
     assert.equal(y, 0);
     assert.ok(w > 0 && h > 0, `${code} is ${shape.viewBox}`);
     assert.ok(shape.d.startsWith('M'), `${code} path starts ${shape.d.slice(0, 8)}`);
+  }
+});
+
+/* A country picker is built from `CODES`, so nothing that is not a country belongs in it,
+   while everything that takes a code takes a region as readily. */
+test('CODES is countries only, and the regions are apart in REGIONS', async () => {
+  assert.deepEqual(REGIONS, ['ARAB', 'ASEAN', 'EAC', 'EU', 'PC', 'UN']);
+  for (const code of CODES) assert.match(code, /^[A-Z]{2}$/, `${code} is not an alpha-2 code`);
+  for (const code of REGIONS) {
+    assert.ok(!CODES.includes(code), `${code} is in CODES`);
+    assert.equal(has(code.toLowerCase()), true, `has('${code.toLowerCase()}')`);
+    assert.ok(await load(code), `${code} does not load`);
   }
 });
 
@@ -73,7 +85,7 @@ test('the crop keeps what belongs and drops what is merely owned', async () => {
  * one of its own: the members laid side by side instead of dissolved.
  */
 test('the EU is its members in one outline, cropped like each of them', async () => {
-  assert.ok(CODES.includes('EU'));
+  assert.ok(REGIONS.includes('EU'));
   assert.equal(has('eu'), true);
   const eu = await load('eu');
   assert.ok(eu !== null);
@@ -91,7 +103,7 @@ test('the EU is its members in one outline, cropped like each of them', async ()
 /* The blocs after it are drawn the same way, and fail the same ways: a member lost, or one
    dragged in from too far. Their codes run past two letters, which no country's does. */
 test('ASEAN is Southeast Asia from Myanmar to Papua', async () => {
-  assert.ok(CODES.includes('ASEAN'));
+  assert.ok(REGIONS.includes('ASEAN'));
   assert.equal(has('asean'), true);
   const asean = await load('asean');
   assert.ok(asean !== null);
@@ -103,7 +115,7 @@ test('ASEAN is Southeast Asia from Myanmar to Papua', async () => {
 });
 
 test('the EAC is East Africa from the Congo to the Horn', async () => {
-  assert.ok(CODES.includes('EAC'));
+  assert.ok(REGIONS.includes('EAC'));
   const eac = await load('eac');
   assert.ok(eac !== null);
   const { w, h } = box(eac.viewBox);
@@ -115,7 +127,7 @@ test('the EAC is East Africa from the Congo to the Horn', async () => {
 
 /* A member out of the crop's reach of every other is a member all the same. */
 test('the Arab League runs from Mauritania to Oman, the Comoros in', async () => {
-  assert.ok(CODES.includes('ARAB'));
+  assert.ok(REGIONS.includes('ARAB'));
   const arab = await load('arab');
   assert.ok(arab !== null);
   const { w, h } = box(arab.viewBox);
@@ -131,7 +143,7 @@ test('the Arab League runs from Mauritania to Oman, the Comoros in', async () =>
  * most of its members are specks, which it keeps, as dots, rather than drop.
  */
 test('the Pacific Community is one ocean, every member in it', async () => {
-  assert.ok(CODES.includes('PC'));
+  assert.ok(REGIONS.includes('PC'));
   const pc = await load('pc');
   assert.ok(pc !== null);
   const { w } = box(pc.viewBox);
@@ -146,7 +158,7 @@ test('the Pacific Community is one ocean, every member in it', async () => {
 /* The world is one shape, not two hundred laid side by side, and Antarctica, left in, is
    the largest ring on the sheet and the only one the crop keeps. */
 test('UN is the whole world but Antarctica, in one outline', async () => {
-  assert.ok(CODES.includes('UN'));
+  assert.ok(REGIONS.includes('UN'));
   const un = await load('un');
   assert.ok(un !== null);
   const { w, h } = box(un.viewBox);
@@ -183,7 +195,7 @@ test('the Pacific countries the crop kept nothing of are there', async () => {
 });
 
 test('every glyph has both tiers of flag', async () => {
-  for (const code of CODES) {
+  for (const code of [...CODES, ...REGIONS]) {
     const raster = await loadFlag(code);
     const vector = await loadFlagSvg(code);
     assert.ok(raster?.startsWith('data:image/png;base64,'), `${code} raster`);

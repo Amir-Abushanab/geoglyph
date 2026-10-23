@@ -25,22 +25,28 @@ export type { BlockOptions } from './blocks.js';
 export { toSvg } from './svg.js';
 export { toBlocks } from './blocks.js';
 
-import { CODES } from '../generated/codes.js';
+import { CODES, REGIONS } from '../generated/codes.js';
 import type { Shape } from './types.js';
 
-/**
- * Every code this package has a glyph for, sorted: ISO 3166-1 alpha-2 for the countries. Five
- * are not countries but blocs, drawn as their members in one outline: `EU`, which ISO 3166
- * reserves for the European Union, `ASEAN`, `EAC`, `ARAB` and `PC`. One is the world: `UN`.
- */
+/** Every country this package has a glyph for, by ISO 3166-1 alpha-2 code, sorted. */
 export { CODES };
 
-const known = new Set(CODES);
+/**
+ * The codes that are not countries, sorted, kept out of `CODES` so a list of countries built
+ * from it has none of them in it. Five blocs, each drawn as its members in one outline —
+ * `EU`, which ISO 3166 reserves for the European Union, `ASEAN`, `EAC`, `ARAB` and `PC` —
+ * and the world, `UN`. Everything else takes them as it takes a country: `load`, `has`, the
+ * flag loaders and the `shape/`, `flag/` and `flag-px/` subpaths.
+ */
+export { REGIONS };
+
+const known = new Set([...CODES, ...REGIONS]);
 
 /**
- * Whether there is a glyph for a code, without loading anything — not the glyph, and not
- * the table of them either. Answered from `CODES`, which is a kilobyte of strings and the
- * only part of the lookup machinery that is worth having in a bundle unconditionally.
+ * Whether there is a glyph for a code, country or region, without loading anything — not
+ * the glyph, and not the table of them either. Answered from `CODES` and `REGIONS`, which
+ * are a kilobyte of strings and the only part of the lookup machinery that is worth having
+ * in a bundle unconditionally.
  */
 export const has = (iso: string): boolean => known.has(iso.toUpperCase());
 

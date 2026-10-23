@@ -17,11 +17,14 @@ import { toSvg } from 'geoglyph/svg';
 toSvg(shape, { flag, size: '1.5em' });
 ```
 
-245 countries by ISO 3166-1 alpha-2 code, five blocs of them and the world, with no runtime
-dependencies. Each country is its own module, so you only ship the ones you import.
+245 countries by ISO 3166-1 alpha-2 code, and six regions, with no runtime dependencies.
+Each country is its own module, so you only ship the ones you import.
 
-Six codes aren't countries, and flag-icons draws a flag for each. Five are blocs, drawn as
-their members dissolved into one outline, each member cropped the way its own glyph is:
+`CODES` lists the countries and only the countries, so a country picker built from it never
+shows a region. The regions are in `REGIONS`, and everything else takes them like any
+country: `load('eu')`, `has('eu')`, the flag loaders and `geoglyph/shape/eu`. flag-icons
+draws a flag for each. Five are blocs, drawn as their members dissolved into one outline,
+each member cropped the way its own glyph is:
 
 - `EU`, the European Union: its 27 members. ISO 3166 reserves the code for it.
 - `ASEAN`, the Association of Southeast Asian Nations: its 11 members, Timor-Leste included.
@@ -83,7 +86,7 @@ Snaps the outline to square cells, `cells` along the longer side (default 10). A
 | `geoglyph/shape/<iso>` | `{ d, viewBox }` |
 | `geoglyph/flag/<iso>` | SVG source |
 | `geoglyph/flag-px/<iso>` | 48×36 PNG data URI |
-| `geoglyph` | `load`, `has`, `CODES`, `toSvg`, `toBlocks` |
+| `geoglyph` | `load`, `has`, `CODES`, `REGIONS`, `toSvg`, `toBlocks` |
 | `geoglyph/svg` | `toSvg`, `clipPathFor`, `flagHref` |
 | `geoglyph/blocks` | `toBlocks` |
 | `geoglyph/react` | `Glyph` |

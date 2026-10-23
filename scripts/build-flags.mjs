@@ -69,7 +69,7 @@ const tidy = (svg) =>
 const quote = (text) =>
   `'${text.replace(/[\\'\n\r\u2028\u2029]/g, (c) => ({ '\n': '\\n', '\r': '\\r', '\u2028': '\\u2028', '\u2029': '\\u2029' })[c] ?? `\\${c}`)}'`;
 
-const { CODES } = await import(join(root, 'generated', 'codes.js'));
+const { CODES, REGIONS } = await import(join(root, 'generated', 'codes.js'));
 
 await rm(SVG_OUT, { recursive: true, force: true });
 await rm(PNG_OUT, { recursive: true, force: true });
@@ -114,7 +114,7 @@ async function one(code) {
   pngBytes += png.length;
 }
 
-const queue = [...CODES];
+const queue = [...CODES, ...REGIONS];
 await Promise.all(
   Array.from({ length: LANES }, async () => {
     for (let code = queue.shift(); code !== undefined; code = queue.shift()) await one(code);

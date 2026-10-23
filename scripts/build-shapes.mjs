@@ -698,13 +698,19 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
     `import type { Shape } from '../dist/types.js';\n` +
       `export declare const shape: Shape;\nexport default shape;\n`,
   );
+  /* Countries and regions in two lists. `CODES` is what a country picker is built from, and
+     a bloc or the world showing up in one is a bug in someone else's app; every other table
+     here — the registries, the modules, the flags — has both. */
+  const regions = new Set([...Object.keys(GROUPS), WORLD]);
   await writeFile(
     join(root, 'generated', 'codes.js'),
-    `export const CODES = ${JSON.stringify(made)};\n`,
+    `export const CODES = ${JSON.stringify(made.filter((code) => !regions.has(code)))};\n` +
+      `export const REGIONS = ${JSON.stringify(made.filter((code) => regions.has(code)))};\n`,
   );
   await writeFile(
     join(root, 'generated', 'codes.d.ts'),
-    `export declare const CODES: readonly string[];\n`,
+    `export declare const CODES: readonly string[];\n` +
+      `export declare const REGIONS: readonly string[];\n`,
   );
   await writeFile(
     join(root, 'generated', 'shape-registry.js'),
