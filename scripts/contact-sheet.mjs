@@ -1,5 +1,5 @@
 /**
- * Draws all 245 glyphs on one page, twice each: bare, and with the flag poured in.
+ * Draws all 246 glyphs on one page, twice each: bare, and with the flag poured in.
  *
  * The crop is a heuristic, and when a heuristic fails here it fails quietly — by drawing
  * a country nobody would recognise, next to an island nobody expected. There is no unit

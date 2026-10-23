@@ -113,6 +113,18 @@ test('the EAC is East Africa from the Congo to the Horn', async () => {
   assert.ok(h > 26 && h < 32, `EAC is ${eac.viewBox} — South Sudan or the south is gone`);
 });
 
+/* A member out of the crop's reach of every other is a member all the same. */
+test('the Arab League runs from Mauritania to Oman, the Comoros in', async () => {
+  assert.ok(CODES.includes('ARAB'));
+  const arab = await load('arab');
+  assert.ok(arab !== null);
+  const { w, h } = box(arab.viewBox);
+  // Mauritania's coast to Oman's is 77 degrees across.
+  assert.ok(w > 80 && w < 86, `ARAB is ${arab.viewBox} — Mauritania or Oman is gone`);
+  // Syria to Somalia is 39 degrees down, and to the Comoros 50.
+  assert.ok(h > 52 && h < 58, `ARAB is ${arab.viewBox} — the Comoros is gone`);
+});
+
 test('the sheet carries what a coarser one drops', async () => {
   for (const code of ['DM', 'GF', 'GD', 'MT', 'SG']) {
     assert.ok(await load(code), `${code} missing — the 110m sheet rounds it away`);

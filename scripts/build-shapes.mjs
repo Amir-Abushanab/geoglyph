@@ -253,21 +253,21 @@ const AIR = 0.04;
  * that a group (see `GROUPS`) can crop each member exactly as that member's glyph is cropped.
  *
  * `anchors` are vertices whose rings are never specks, however small: in a group, each
- * member's own landmass, so Malta is not dropped from the Union for being Malta-sized.
+ * member's own landmass, so Malta is not dropped from the Union for being Malta-sized. Nor
+ * are they ever too far away: a member is in its group wherever it lies, so the Comoros is
+ * in the Arab League though no other member is within reach of it.
  */
 export function cropOf(rings, anchors = new Set()) {
   if (rings.length === 0) return null;
   const span = spanOf(boxOf(rings.flat()));
   if (span === 0) return null;
 
+  const anchored = (part) => part.ring.some((point) => anchors.has(pointKey(point)));
   /* Specks first: an islet the size of the grid is a rounding artefact, and leaving it in
      lets the crop reach across an ocean through a chain of them. */
   const parts = rings
     .map((ring) => ({ ring, box: boxOf(ring) }))
-    .filter(
-      (part) =>
-        spanOf(part.box) >= span * SPECK || part.ring.some((point) => anchors.has(pointKey(point))),
-    )
+    .filter((part) => spanOf(part.box) >= span * SPECK || anchored(part))
     .toSorted((a, b) => spanOf(b.box) - spanOf(a.box));
   if (parts.length === 0) return null;
 
@@ -281,6 +281,15 @@ export function cropOf(rings, anchors = new Set()) {
     growing = false;
     for (const part of parts) {
       if (kept.includes(part) || !within(frame, part.box, slack)) continue;
+      kept.push(part);
+      frame = union(frame, part.box);
+      growing = true;
+    }
+    /* Only once nothing more is in reach, so a group whose every member is reached keeps
+       its rings in the order it always has; an anchor taken in here grows the crop on. */
+    if (growing) continue;
+    for (const part of parts) {
+      if (kept.includes(part) || !anchored(part)) continue;
       kept.push(part);
       frame = union(frame, part.box);
       growing = true;
@@ -396,6 +405,15 @@ const GROUPS = {
      `SO`, so by default without Somaliland, which Natural Earth draws apart and gives no
      code; a viewpoint that gives it to Somalia gives it to the Community too. */
   EAC: 'BI CD KE RW SO SS TZ UG'.split(' '),
+  /* The League of Arab States: its 22 members, as the member-states list on the League's own
+     portal (lasportal.org) gives them — read through the Internet Archive's copy of March
+     2026, the portal itself not answering — with Syria's seat restored since May 2023. As
+     with the EAC, Somalia comes without Somaliland and Morocco without Western Sahara, which
+     Natural Earth files under `EH`, its own code; and Palestine is drawn as its own glyph is
+     (see `SHAPE_FROM`). The Comoros, at the head of the Mozambique Channel and over 1,000 km
+     from Somalia, is out of the crop's reach of any other member, and stays because it is
+     one (see `cropOf`). */
+  ARAB: 'AE BH DJ DZ EG IQ JO KM KW LB LY MA MR OM PS QA SA SD SO SY TN YE'.split(' '),
 };
 
 /** Where a feature's land goes under the chosen viewpoint. */
@@ -535,7 +553,7 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
     bytes += glyph.d.length;
   }
 
-  /* One declaration for every country rather than 245 identical ones: the `types`
+  /* One declaration for every country rather than 246 identical ones: the `types`
      condition in the exports map has no wildcard in it, so TypeScript reads this file
      for `geoglyph/shape/anything` and the package sheds several hundred files. */
   await writeFile(

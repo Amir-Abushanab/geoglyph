@@ -56,7 +56,7 @@ if (missing.length > 0 || extra.length > 0) {
 const entries = Object.keys(pkg.exports).filter((k) => k !== './package.json');
 
 /* The codes that are not countries, as the summary names them. */
-const GROUPS = { EU: 'the EU', ASEAN: 'ASEAN', EAC: 'the EAC' };
+const GROUPS = { EU: 'the EU', ASEAN: 'ASEAN', EAC: 'the EAC', ARAB: 'the Arab League' };
 const listed = (items) =>
   items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
 

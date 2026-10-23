@@ -10,6 +10,7 @@ export const flags = {
   AO: () => import('./flag/ao.js'),
   AQ: () => import('./flag/aq.js'),
   AR: () => import('./flag/ar.js'),
+  ARAB: () => import('./flag/arab.js'),
   AS: () => import('./flag/as.js'),
   ASEAN: () => import('./flag/asean.js'),
   AT: () => import('./flag/at.js'),

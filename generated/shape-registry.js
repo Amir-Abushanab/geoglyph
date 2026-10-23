@@ -10,6 +10,7 @@ export const shapes = {
   AO: () => import('./shape/ao.js'),
   AQ: () => import('./shape/aq.js'),
   AR: () => import('./shape/ar.js'),
+  ARAB: () => import('./shape/arab.js'),
   AS: () => import('./shape/as.js'),
   ASEAN: () => import('./shape/asean.js'),
   AT: () => import('./shape/at.js'),
