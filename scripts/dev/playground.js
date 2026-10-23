@@ -4,7 +4,7 @@
  * change to `toSvg` shows up on screen and a change to the crop shows up in the grid.
  *
  * One thing is deliberately not re-rendered. `size` and `fill` are pushed to the page as
- * custom properties instead of re-serialising 248 outlines on every frame of a slider
+ * custom properties instead of re-serialising 251 outlines on every frame of a slider
  * drag. That is not a cheat: both land on a presentation attribute, which sits below any
  * stylesheet in the cascade, so the pixels are the same ones the same values passed to
  * `toSvg` would produce. The detail panel does call `toSvg` with the real settings, and
@@ -399,7 +399,7 @@ detail.addEventListener('click', async (event) => {
   }, 1200);
 });
 
-/** Structural changes rebuild the grid; a keystroke in the filter should not do that 248
+/** Structural changes rebuild the grid; a keystroke in the filter should not do that 251
     times on the way to a word. */
 let queued;
 const rerender = () => {

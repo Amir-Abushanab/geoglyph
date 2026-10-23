@@ -163,6 +163,25 @@ test('the sheet carries what a coarser one drops', async () => {
   }
 });
 
+/*
+ * The three the crop once kept nothing of. Fiji, cut in two by the date line, is every
+ * island a speck beside a span of 360 degrees unless it is drawn the other way round; Kiribati
+ * and Micronesia are every island a speck beside their chains, so each is its largest.
+ */
+test('the Pacific countries the crop kept nothing of are there', async () => {
+  const fj = await load('FJ');
+  assert.ok(fj !== null, 'FJ missing — the date line cut it in two');
+  // Viti Levu to Vanua Levu's tip at the date line is three degrees.
+  assert.ok(box(fj.viewBox).w < 5, `FJ is ${fj.viewBox} — drawn round the world`);
+  assert.ok(subpaths(fj.d) >= 2, 'FJ lost Vanua Levu');
+  for (const code of ['KI', 'FM']) {
+    const shape = await load(code);
+    assert.ok(shape !== null, `${code} missing — every island a speck`);
+    // Kiritimati and Pohnpei are each under half a degree across.
+    assert.ok(box(shape.viewBox).w < 0.6, `${code} is ${shape.viewBox} — more than one island`);
+  }
+});
+
 test('every glyph has both tiers of flag', async () => {
   for (const code of CODES) {
     const raster = await loadFlag(code);

@@ -17,7 +17,7 @@ import { toSvg } from 'geoglyph/svg';
 toSvg(shape, { flag, size: '1.5em' });
 ```
 
-242 countries by ISO 3166-1 alpha-2 code, five blocs of them and the world, with no runtime
+245 countries by ISO 3166-1 alpha-2 code, five blocs of them and the world, with no runtime
 dependencies. Each country is its own module, so you only ship the ones you import.
 
 Six codes aren't countries, and flag-icons draws a flag for each. Five are blocs, drawn as
@@ -108,6 +108,9 @@ so its stripes still read inside a narrow country.
 
 - Each country is cropped to its main landmass: the US without Alaska and Hawaii, France
   without Réunion. Nearby islands like Tasmania, Corsica and both of New Zealand stay.
+- Fiji is drawn across the date line, which cuts it in two. Kiribati and Micronesia, atolls
+  strung out over thousands of kilometres, are each their largest island: Kiritimati and
+  Pohnpei.
 - Coordinates are plain longitude and latitude, so countries far from the equator come out
   wide. Norway and Canada are stretched; Kenya and Indonesia are true.
 - No states or provinces, and the shapes don't share a coordinate space, so they can't be

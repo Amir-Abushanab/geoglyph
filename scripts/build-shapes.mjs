@@ -435,8 +435,9 @@ const GROUPS = {
  * puts the seam at 180°, which suits every country but the few it cuts in two, and a group
  * of Pacific islands is nothing but those: west of the line from Palau to Tuvalu, east of it
  * from Samoa to Pitcairn. Moving everything west of Greenwich a whole turn east draws them
- * as one ocean, and each member is cropped there too — Fiji included, which in the plain
- * projection is two halves 360° apart and so has no glyph of its own.
+ * as one ocean, and each member is cropped there too — Fiji included, which the plain
+ * projection cuts into two halves 360° apart, and whose own glyph is drawn this way round
+ * for that reason (see `adrift`).
  */
 const DATELINE = new Set(['PC']);
 
@@ -445,6 +446,39 @@ const DATELINE = new Set(['PC']);
     360, where `dissolve` closes the seam. */
 const eastward = (ring) =>
   ring.every(([x]) => x < 180) ? ring.map(([x, y]) => [x + 360, y]) : ring;
+
+/**
+ * The last resort for a country the crop keeps nothing of, with a note of what was done for
+ * its module's header. Only ever reached when `glyphOf` returns null, so no country it can
+ * draw is drawn any differently. By default that is three, all in the Pacific.
+ *
+ * Fiji straddles the date line, so in the plain projection its two halves are 360° apart,
+ * every island is a speck beside that span, and the specks take everything. Drawn the other
+ * way round, with the date line in the middle as `DATELINE` draws a group, it is three
+ * degrees across and crops like any country. Only a country that is narrower that way round
+ * is tried that way: Russia and the United States cross the line too, and are drawn as they
+ * always have been, since they never get here.
+ *
+ * Kiribati and Micronesia are still nothing but specks either way round: each is atolls
+ * strung out over a chain twenty or thirty degrees long, and no island in it is a ninetieth
+ * of that. Each is drawn as its largest island alone — Kiritimati, Pohnpei — the way
+ * Tuvalu and the Marshall Islands already are drawn as one atoll. The chain as dots, the way
+ * `dotted` draws the Pacific Community, was the other way to go, and is the wrong one for a
+ * country: a dot a ninetieth of the span is a fifth of a pixel at the size a glyph is set,
+ * so at 1em the glyph would be empty, where one island fills its box and holds the flag.
+ */
+function adrift(rings) {
+  const turned = rings.map(eastward);
+  const across = spanOf(boxOf(turned.flat())) < spanOf(boxOf(rings.flat()));
+  const glyph = across ? glyphOf(turned) : null;
+  if (glyph !== null) return { glyph, note: 'drawn across the date line (see adrift), ' };
+  const largest = (across ? turned : rings).toSorted(
+    (a, b) => spanOf(boxOf(b)) - spanOf(boxOf(a)),
+  )[0];
+  return largest === undefined
+    ? null
+    : { glyph: glyphOf([largest]), note: 'its largest island alone (see adrift), ' };
+}
 
 /**
  * Members as a group draws them, for a group that is mostly islands too small to see. Where
@@ -594,9 +628,9 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
   for (const [code, members] of Object.entries(GROUPS)) {
     const sheetOf = (member) =>
       (byCode.get(member) ?? []).map((ring) => (DATELINE.has(code) ? eastward(ring) : ring));
-    /* A member whose own crop keeps nothing is its largest island. That is Micronesia and
-       Kiribati, which have no glyph of their own: every island in each is a speck beside
-       the span of its chain. */
+    /* A member whose own crop keeps nothing is its largest island, as its own glyph is (see
+       `adrift`). That is Micronesia and Kiribati: every island in each is a speck beside the
+       span of its chain. */
     const largestOf = (rings) =>
       rings.length === 0
         ? null
@@ -627,20 +661,24 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
     const members = GROUPS[code];
     /* A group is simplified like any country: dissolved, it has no second copy of a border
        to drift from. */
-    const glyph = glyphOf(
+    const drawn = glyphOf(
       rings,
       from === undefined ? SIMPLIFY : SIMPLIFY_UNION,
       anchorsOf.get(code),
     );
+    const last = drawn === null ? adrift(rings) : null;
+    const glyph = drawn ?? last?.glyph ?? null;
     if (glyph === null) continue;
     const source =
-      from !== undefined
-        ? `${from.join('+')} combined (see SHAPE_FROM), `
-        : members !== undefined
-          ? `${members.join('+')} dissolved (see GROUPS), `
-          : code === WORLD
-            ? `every feature but Antarctica dissolved (see WORLD), `
-            : '';
+      last !== null
+        ? last.note
+        : from !== undefined
+          ? `${from.join('+')} combined (see SHAPE_FROM), `
+          : members !== undefined
+            ? `${members.join('+')} dissolved (see GROUPS), `
+            : code === WORLD
+              ? `every feature but Antarctica dissolved (see WORLD), `
+              : '';
     const lower = code.toLowerCase();
     await writeFile(
       join(OUT, `${lower}.js`),
@@ -652,7 +690,7 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
     bytes += glyph.d.length;
   }
 
-  /* One declaration for every country rather than 248 identical ones: the `types`
+  /* One declaration for every country rather than 251 identical ones: the `types`
      condition in the exports map has no wildcard in it, so TypeScript reads this file
      for `geoglyph/shape/anything` and the package sheds several hundred files. */
   await writeFile(

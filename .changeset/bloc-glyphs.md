@@ -28,3 +28,8 @@ too small to see at that scale, Tuvalu to Pitcairn, are dots.
 Add `UN`, the world, filled with flag-icons' `un.svg`: every piece of land on the sheet in one
 outline, the ground no country's code holds included, nothing cropped from it, and
 Antarctica left out as the UN emblem leaves it out.
+
+Add `FJ`, `KI` and `FM`, Fiji, Kiribati and Micronesia, which had no glyph: the crop kept
+nothing of them. Fiji is drawn across the date line, which cuts it in two, and Kiribati and
+Micronesia, whose every island is a speck beside the span of their chains, as their largest
+island, Kiritimati and Pohnpei. Every other glyph is unchanged.
