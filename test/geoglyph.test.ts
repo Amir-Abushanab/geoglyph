@@ -143,6 +143,20 @@ test('the Pacific Community is one ocean, every member in it', async () => {
   assert.ok(subpaths(pc.d) >= 24, `PC is ${String(subpaths(pc.d))} outlines — a member is gone`);
 });
 
+/* The world is one shape, not two hundred laid side by side, and Antarctica, left in, is
+   the largest ring on the sheet and the only one the crop keeps. */
+test('UN is the whole world but Antarctica, in one outline', async () => {
+  assert.ok(CODES.includes('UN'));
+  const un = await load('un');
+  assert.ok(un !== null);
+  const { w, h } = box(un.viewBox);
+  // A whole turn across, and Greenland to Tierra del Fuego 139 degrees down, each with 29
+  // of air. Antarctica alone would be 56 down, and the world with it 209.
+  assert.ok(w > 380, `UN is ${un.viewBox} — a continent is gone`);
+  assert.ok(h > 160 && h < 180, `UN is ${un.viewBox} — Antarctica is back`);
+  assert.ok(subpaths(un.d) < 100, `UN is ${String(subpaths(un.d))} outlines — not dissolved`);
+});
+
 test('the sheet carries what a coarser one drops', async () => {
   for (const code of ['DM', 'GF', 'GD', 'MT', 'SG']) {
     assert.ok(await load(code), `${code} missing — the 110m sheet rounds it away`);

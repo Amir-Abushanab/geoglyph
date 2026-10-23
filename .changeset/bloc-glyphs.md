@@ -24,3 +24,7 @@ France, the United Kingdom and the United States are members too but are not dra
 Pacific would be a speck between their mainlands. It is drawn with the date line in the
 middle, so Fiji, Kiribati and the islands either side of it are one ocean, and its members
 too small to see at that scale, Tuvalu to Pitcairn, are dots.
+
+Add `UN`, the world, filled with flag-icons' `un.svg`: every piece of land on the sheet in one
+outline, the ground no country's code holds included, nothing cropped from it, and
+Antarctica left out as the UN emblem leaves it out.

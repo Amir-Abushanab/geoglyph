@@ -229,6 +229,7 @@ export const shapes = {
   TZ: () => import('./shape/tz.js'),
   UA: () => import('./shape/ua.js'),
   UG: () => import('./shape/ug.js'),
+  UN: () => import('./shape/un.js'),
   US: () => import('./shape/us.js'),
   UY: () => import('./shape/uy.js'),
   UZ: () => import('./shape/uz.js'),

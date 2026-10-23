@@ -229,6 +229,7 @@ export const flags = {
   TZ: () => import('./flag/tz.js'),
   UA: () => import('./flag/ua.js'),
   UG: () => import('./flag/ug.js'),
+  UN: () => import('./flag/un.js'),
   US: () => import('./flag/us.js'),
   UY: () => import('./flag/uy.js'),
   UZ: () => import('./flag/uz.js'),

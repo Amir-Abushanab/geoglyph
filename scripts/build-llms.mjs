@@ -63,13 +63,15 @@ const GROUPS = {
   ARAB: 'the Arab League',
   PC: 'the Pacific Community',
 };
+/* Not a bloc but the world, so named on its own. */
+const WORLD = 'UN';
 const listed = (items) =>
   items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
 
 const text = `# geoglyph
 
 > Every country as an SVG outline the size of a letter, with its flag to pour inside.
-> ${String(CODES.filter((code) => !(code in GROUPS)).length)} countries, ISO 3166-1 alpha-2, plus ${listed(Object.values(GROUPS))}. ESM only, no runtime dependencies.
+> ${String(CODES.filter((code) => !(code in GROUPS) && code !== WORLD).length)} countries, ISO 3166-1 alpha-2, plus ${listed([...Object.values(GROUPS), 'the world'])}. ESM only, no runtime dependencies.
 
 Playground: https://amir-abushanab.github.io/geoglyph/
 Version: ${pkg.version}
@@ -96,7 +98,8 @@ ${entries.map((e) => `- \`${e.replace('.', 'geoglyph')}\``).join('\n')}
 - \`<Glyph>\` takes \`shape\`, not a country code. It fetches nothing.
 - \`load\` and \`loadFlag\` return \`null\` for an unknown code. \`has(iso)\` checks first.
 - ${listed(Object.keys(GROUPS).map((code) => `\`${code}\``))} are not countries but blocs: their members in one
-  outline, with the bloc's flag. They are in \`CODES\` and load like any other.
+  outline, with the bloc's flag. \`${WORLD}\` is the whole world, with the UN flag. They
+  are in \`CODES\` and load like any other.
 - A flag replaces the silhouette. If you fade the flag out with CSS, pass
   \`backdrop: true\` or it fades onto the page instead of onto the shape.
 

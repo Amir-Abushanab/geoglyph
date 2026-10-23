@@ -473,6 +473,28 @@ function dotted(crops) {
   });
 }
 
+/**
+ * The one code drawn as the whole world: `UN`, which flag-icons fills with the United
+ * Nations' flag. Every feature on the sheet, dissolved into one outline as a group's members
+ * are, with two differences.
+ *
+ * It is taken from the features, not the codes. The codes leave out ground no viewpoint
+ * files under any of them — by default Crimea, Somaliland, Northern Cyprus and the Siachen
+ * Glacier — and the world with holes where they are would be taking a side by leaving them
+ * blank. Land is land, so this is the same under every viewpoint.
+ *
+ * And nothing is cropped first: the crop is for telling a country from what it merely owns,
+ * and nothing is overseas from the world. Alaska, Hawaii and Réunion all count; what the
+ * specks then drop at the scale of the whole — Hawaii and Sri Lanka among it — they would
+ * drop from any shape this size.
+ *
+ * Antarctica is left out, as the UN emblem leaves it out. In this projection it is a band
+ * the whole width of the bottom edge, the South Pole stretched as wide as the equator, and
+ * the largest ring on the sheet — the one the crop starts from, with no other land within
+ * reach of it, so left in, the world comes out as Antarctica alone.
+ */
+const WORLD = 'UN';
+
 /** Where a feature's land goes under the chosen viewpoint. */
 const a3Under = (properties) =>
   (POV === undefined ? undefined : properties[`ADM0_A3_${POV}`]) ?? properties.ADM0_A3;
@@ -515,8 +537,11 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
   const byCode = new Map();
   const stateless = new Map();
   const reassigned = [];
+  /* Every ring on the sheet bar Antarctica's, wherever any viewpoint files it (see `WORLD`). */
+  const land = [];
   for (const feature of geo.features) {
     const properties = feature.properties;
+    if (properties.ADM0_A3 !== 'ATA') land.push(...ringsOf(feature.geometry));
     const moved = a3Under(properties);
     /* Left where it is, it keeps its own code — which is what holds French Guiana apart
        from France. Moved, it becomes part of whoever this viewpoint says holds it.
@@ -589,6 +614,8 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
     anchorsOf.set(code, new Set(crops.map((crop) => pointKey(crop.rings[0][0]))));
     combined.push(`${code} ← ${members.join('+')}`);
   }
+  byCode.set(WORLD, dissolve(land));
+  combined.push(`${WORLD} ← the world but Antarctica`);
 
   await rm(OUT, { recursive: true, force: true });
   await mkdir(OUT, { recursive: true });
@@ -611,7 +638,9 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
         ? `${from.join('+')} combined (see SHAPE_FROM), `
         : members !== undefined
           ? `${members.join('+')} dissolved (see GROUPS), `
-          : '';
+          : code === WORLD
+            ? `every feature but Antarctica dissolved (see WORLD), `
+            : '';
     const lower = code.toLowerCase();
     await writeFile(
       join(OUT, `${lower}.js`),
@@ -623,7 +652,7 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
     bytes += glyph.d.length;
   }
 
-  /* One declaration for every country rather than 247 identical ones: the `types`
+  /* One declaration for every country rather than 248 identical ones: the `types`
      condition in the exports map has no wildcard in it, so TypeScript reads this file
      for `geoglyph/shape/anything` and the package sheds several hundred files. */
   await writeFile(
