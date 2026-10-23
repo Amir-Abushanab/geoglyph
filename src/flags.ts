@@ -2,7 +2,7 @@
  * The 48×36 raster flag for a code, loaded on demand — ~640 bytes, whatever the country.
  *
  * Its own entry point rather than a function on the main one, and that is load-bearing
- * rather than tidy. A registry is a table of 243 literal dynamic imports, and a bundler
+ * rather than tidy. A registry is a table of 244 literal dynamic imports, and a bundler
  * emits a chunk for every one it can see, whether or not the function that reads them is
  * ever called — tree-shaking removes dead code, but `import()` has already been counted
  * by then. Reached through the index, a build that only ever drew silhouettes emitted 484

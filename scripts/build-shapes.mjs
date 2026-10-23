@@ -366,25 +366,31 @@ const POV = process.env.GEOGLYPH_POV?.toUpperCase();
 const SHAPE_FROM = { IL: ['IL', 'PS'], PS: ['IL', 'PS'] };
 
 /**
- * Codes that are not a country but a union of them. One: `EU`, which ISO 3166 reserves
- * exceptionally, which flag-icons draws a flag for, and which people picture as a shape of
- * its own — not as twenty-seven.
+ * Codes that are not a country but a union of them: blocs flag-icons draws a flag for, and
+ * which people picture as a shape of their own — not as twenty-seven, or eleven.
  *
  * Each member is cropped first, exactly as its own glyph is — France without Réunion,
  * Portugal without the Azores and Madeira, Spain without the Canaries — and what is left is
  * dissolved into one outline (see `dissolve`), so the specks and the crop then run once
  * more at the scale of the whole. That drops Bornholm and most of the Aegean, as it would
  * for any country this size, but never a member: each one's own landmass is an anchor, so
- * Malta stays. Åland is listed beside Finland: Natural Earth gives it a code of its own,
- * and it is in the Union.
+ * Malta stays.
  *
  * Members are whatever the sheet has filed under their codes, so a viewpoint that gives
- * Northern Cyprus to `CY` gives it to the Union too.
+ * Northern Cyprus to `CY` gives it to the Union too. Each list is the bloc's own, read off
+ * its own site in October 2026.
  */
 const GROUPS = {
+  /* The European Union, whose code ISO 3166 reserves exceptionally: its 27 member states.
+     Åland is listed beside Finland: Natural Earth gives it a code of its own, and it is in
+     the Union. */
   EU: 'AT AX BE BG CY CZ DE DK EE ES FI FR GR HR HU IE IT LT LU LV MT NL PL PT RO SE SI SK'.split(
     ' ',
   ),
+  /* ASEAN, the Association of Southeast Asian Nations: its eleven member states, Timor-Leste
+     the eleventh since 26 October 2025 (asean.org/member-states). Indonesia comes whole, as
+     its own glyph does, so the eastern edge is Papua's border with Papua New Guinea. */
+  ASEAN: 'BN ID KH LA MM MY PH SG TH TL VN'.split(' '),
 };
 
 /** Where a feature's land goes under the chosen viewpoint. */
@@ -524,7 +530,7 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
     bytes += glyph.d.length;
   }
 
-  /* One declaration for every country rather than 243 identical ones: the `types`
+  /* One declaration for every country rather than 244 identical ones: the `types`
      condition in the exports map has no wildcard in it, so TypeScript reads this file
      for `geoglyph/shape/anything` and the package sheds several hundred files. */
   await writeFile(

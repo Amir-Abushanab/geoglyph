@@ -88,6 +88,20 @@ test('the EU is its members in one outline, cropped like each of them', async ()
   assert.ok(subpaths(eu.d) >= 10, 'EU lost its islands');
 });
 
+/* The blocs after it are drawn the same way, and fail the same ways: a member lost, or one
+   dragged in from too far. Their codes run past two letters, which no country's does. */
+test('ASEAN is Southeast Asia from Myanmar to Papua', async () => {
+  assert.ok(CODES.includes('ASEAN'));
+  assert.equal(has('asean'), true);
+  const asean = await load('asean');
+  assert.ok(asean !== null);
+  const { w, h } = box(asean.viewBox);
+  // Myanmar's coast to Papua's border is 49 degrees across, and Kachin to Rote 40 down.
+  assert.ok(w > 50 && w < 56, `ASEAN is ${asean.viewBox} — Myanmar or Papua is gone`);
+  assert.ok(h > 40 && h < 46, `ASEAN is ${asean.viewBox} — Kachin or the Lesser Sundas is gone`);
+  assert.ok(subpaths(asean.d) >= 20, 'ASEAN lost its islands');
+});
+
 test('the sheet carries what a coarser one drops', async () => {
   for (const code of ['DM', 'GF', 'GD', 'MT', 'SG']) {
     assert.ok(await load(code), `${code} missing — the 110m sheet rounds it away`);

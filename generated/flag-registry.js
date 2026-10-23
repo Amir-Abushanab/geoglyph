@@ -11,6 +11,7 @@ export const flags = {
   AQ: () => import('./flag/aq.js'),
   AR: () => import('./flag/ar.js'),
   AS: () => import('./flag/as.js'),
+  ASEAN: () => import('./flag/asean.js'),
   AT: () => import('./flag/at.js'),
   AU: () => import('./flag/au.js'),
   AW: () => import('./flag/aw.js'),

@@ -55,10 +55,15 @@ if (missing.length > 0 || extra.length > 0) {
 
 const entries = Object.keys(pkg.exports).filter((k) => k !== './package.json');
 
+/* The codes that are not countries, as the summary names them. */
+const GROUPS = { EU: 'the EU', ASEAN: 'ASEAN' };
+const listed = (items) =>
+  items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items.at(-1)}`;
+
 const text = `# geoglyph
 
 > Every country as an SVG outline the size of a letter, with its flag to pour inside.
-> ${String(CODES.filter((code) => code !== 'EU').length)} countries, ISO 3166-1 alpha-2, and the EU. ESM only, no runtime dependencies.
+> ${String(CODES.filter((code) => !(code in GROUPS)).length)} countries, ISO 3166-1 alpha-2, plus ${listed(Object.values(GROUPS))}. ESM only, no runtime dependencies.
 
 Playground: https://amir-abushanab.github.io/geoglyph/
 Version: ${pkg.version}
@@ -84,8 +89,8 @@ ${entries.map((e) => `- \`${e.replace('.', 'geoglyph')}\``).join('\n')}
 - \`toSvg\` returns a string of SVG markup, not an element.
 - \`<Glyph>\` takes \`shape\`, not a country code. It fetches nothing.
 - \`load\` and \`loadFlag\` return \`null\` for an unknown code. \`has(iso)\` checks first.
-- \`EU\` is the European Union, the one code that is not a country: its members in one
-  outline, with the EU flag. It is in \`CODES\` and loads like any other.
+- ${listed(Object.keys(GROUPS).map((code) => `\`${code}\``))} are not countries but blocs: their members in one
+  outline, with the bloc's flag. They are in \`CODES\` and load like any other.
 - A flag replaces the silhouette. If you fade the flag out with CSS, pass
   \`backdrop: true\` or it fades onto the page instead of onto the shape.
 

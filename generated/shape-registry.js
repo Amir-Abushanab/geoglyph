@@ -11,6 +11,7 @@ export const shapes = {
   AQ: () => import('./shape/aq.js'),
   AR: () => import('./shape/ar.js'),
   AS: () => import('./shape/as.js'),
+  ASEAN: () => import('./shape/asean.js'),
   AT: () => import('./shape/at.js'),
   AU: () => import('./shape/au.js'),
   AW: () => import('./shape/aw.js'),
