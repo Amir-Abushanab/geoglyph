@@ -391,6 +391,11 @@ const GROUPS = {
      the eleventh since 26 October 2025 (asean.org/member-states). Indonesia comes whole, as
      its own glyph does, so the eastern edge is Papua's border with Papua New Guinea. */
   ASEAN: 'BN ID KH LA MM MY PH SG TH TL VN'.split(' '),
+  /* The East African Community: its eight partner states, the DR Congo in since 2022 and
+     Somalia since 2024 (eac.int/eac-partner-states). Somalia is what the sheet files under
+     `SO`, so by default without Somaliland, which Natural Earth draws apart and gives no
+     code; a viewpoint that gives it to Somalia gives it to the Community too. */
+  EAC: 'BI CD KE RW SO SS TZ UG'.split(' '),
 };
 
 /** Where a feature's land goes under the chosen viewpoint. */
@@ -530,7 +535,7 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
     bytes += glyph.d.length;
   }
 
-  /* One declaration for every country rather than 244 identical ones: the `types`
+  /* One declaration for every country rather than 245 identical ones: the `types`
      condition in the exports map has no wildcard in it, so TypeScript reads this file
      for `geoglyph/shape/anything` and the package sheds several hundred files. */
   await writeFile(

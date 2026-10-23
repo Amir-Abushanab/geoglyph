@@ -62,6 +62,7 @@ export const flagsPx = {
   DM: () => import('./flag-px/dm.js'),
   DO: () => import('./flag-px/do.js'),
   DZ: () => import('./flag-px/dz.js'),
+  EAC: () => import('./flag-px/eac.js'),
   EC: () => import('./flag-px/ec.js'),
   EE: () => import('./flag-px/ee.js'),
   EG: () => import('./flag-px/eg.js'),

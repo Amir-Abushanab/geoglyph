@@ -4,7 +4,7 @@
  * change to `toSvg` shows up on screen and a change to the crop shows up in the grid.
  *
  * One thing is deliberately not re-rendered. `size` and `fill` are pushed to the page as
- * custom properties instead of re-serialising 244 outlines on every frame of a slider
+ * custom properties instead of re-serialising 245 outlines on every frame of a slider
  * drag. That is not a cheat: both land on a presentation attribute, which sits below any
  * stylesheet in the cascade, so the pixels are the same ones the same values passed to
  * `toSvg` would produce. The detail panel does call `toSvg` with the real settings, and
@@ -47,7 +47,7 @@ const RENAMED = { IL: 'Occupied Palestine' };
 /* The package ships codes, not names — the browser already has the table. It has one for
    `EU` too, but not for the other blocs, which are not regions to it. */
 const regions = new Intl.DisplayNames(['en'], { type: 'region' });
-const BLOCS = { ASEAN: 'ASEAN' };
+const BLOCS = { ASEAN: 'ASEAN', EAC: 'East African Community' };
 const nameOf = (code) => {
   if (code in RENAMED) return RENAMED[code];
   if (code in BLOCS) return BLOCS[code];
@@ -392,7 +392,7 @@ detail.addEventListener('click', async (event) => {
   }, 1200);
 });
 
-/** Structural changes rebuild the grid; a keystroke in the filter should not do that 244
+/** Structural changes rebuild the grid; a keystroke in the filter should not do that 245
     times on the way to a word. */
 let queued;
 const rerender = () => {

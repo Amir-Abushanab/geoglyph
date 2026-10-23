@@ -102,6 +102,17 @@ test('ASEAN is Southeast Asia from Myanmar to Papua', async () => {
   assert.ok(subpaths(asean.d) >= 20, 'ASEAN lost its islands');
 });
 
+test('the EAC is East Africa from the Congo to the Horn', async () => {
+  assert.ok(CODES.includes('EAC'));
+  const eac = await load('eac');
+  assert.ok(eac !== null);
+  const { w, h } = box(eac.viewBox);
+  // The Congo's Atlantic coast to Somalia's eastern tip is 39 degrees, South Sudan's north
+  // to Katanga 26.
+  assert.ok(w > 40 && w < 45, `EAC is ${eac.viewBox} — the DR Congo or Somalia is gone`);
+  assert.ok(h > 26 && h < 32, `EAC is ${eac.viewBox} — South Sudan or the south is gone`);
+});
+
 test('the sheet carries what a coarser one drops', async () => {
   for (const code of ['DM', 'GF', 'GD', 'MT', 'SG']) {
     assert.ok(await load(code), `${code} missing — the 110m sheet rounds it away`);

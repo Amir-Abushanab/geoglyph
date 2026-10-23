@@ -62,6 +62,7 @@ export const flags = {
   DM: () => import('./flag/dm.js'),
   DO: () => import('./flag/do.js'),
   DZ: () => import('./flag/dz.js'),
+  EAC: () => import('./flag/eac.js'),
   EC: () => import('./flag/ec.js'),
   EE: () => import('./flag/ee.js'),
   EG: () => import('./flag/eg.js'),

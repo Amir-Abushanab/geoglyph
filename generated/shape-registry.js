@@ -62,6 +62,7 @@ export const shapes = {
   DM: () => import('./shape/dm.js'),
   DO: () => import('./shape/do.js'),
   DZ: () => import('./shape/dz.js'),
+  EAC: () => import('./shape/eac.js'),
   EC: () => import('./shape/ec.js'),
   EE: () => import('./shape/ee.js'),
   EG: () => import('./shape/eg.js'),
