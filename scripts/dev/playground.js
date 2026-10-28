@@ -189,16 +189,17 @@ function artFor(code, current, flag) {
   return toSvg(shape, optionsFor(code, current, current.draw === 'flag' ? flag : undefined));
 }
 
+/* A two-letter term is a code and is matched as one: every alpha-2 is a substring of
+   some country's name, so `br, jp, cl` would otherwise hand you Brunei, Brazzaville and
+   the British Virgin Islands alongside the three you named. Three letters or more is a
+   search again, so `bra` still finds both Brazils. */
+const hit = (code, term) =>
+  term.length === 2
+    ? code.toLowerCase() === term
+    : code.toLowerCase().includes(term) || nameOf(code).toLowerCase().includes(term);
+
 function visible(current) {
-  /* Any term, not every term — a list of countries is a union, not an intersection.
-     A two-letter term is a code and is matched as one: every alpha-2 is a substring of
-     some country's name, so `br, jp, cl` would otherwise hand you Brunei, Brazzaville and
-     the British Virgin Islands alongside the three you named. Three letters or more is a
-     search again, so `bra` still finds both Brazils. */
-  const hit = (code, term) =>
-    term.length === 2
-      ? code.toLowerCase() === term
-      : code.toLowerCase().includes(term) || nameOf(code).toLowerCase().includes(term);
+  /* Any term, not every term — a list of countries is a union, not an intersection. */
   const matches = (code) =>
     current.terms.length === 0 || current.terms.some((term) => hit(code, term));
   const codes = ALL.filter(matches);
